@@ -51,7 +51,7 @@ class CoreModuleView extends CoreView {
 
   public function useScript($path, $pad = null, $assetPath = null, $location = CoreModuleView::MODULE) {
     if (file_exists(CORE_MODULE_PATH . CORE_APP_ASSET . $path)) {
-      $this->scripts[] = $this->moduleAsset($path, $pad, $assetPath, $location);
+      $this->scripts[] = $this->moduleAsset($path.'?time='.microtime(true), $pad, $assetPath, $location);
       return;
     } else parent::useScript($path, $pad, $assetPath);
   }

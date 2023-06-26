@@ -99,7 +99,8 @@ class App {
   }
 
   static getLines() {
-
+    console.log('start get lines');
+    console.log('Get All interchanges and make Graph List Interchanges');
     Core.instance().ajax().get('m/x/mta/lineApi/getInterchanges').then(interchanges => {
       interchanges.forEach(i => {
         let idpoints = [];
@@ -109,10 +110,16 @@ class App {
     });
 
 
+    console.log('Get all Lines (mikrolet)')
     Core.instance().ajax().get('m/x/mta/lineApi/getLines').then(lines => {
       let linePromises = [];
       let idlines = [];
-      lines.forEach(line => { // console.log(line);
+      console.log("its lines :", lines)
+      lines.forEach(line => { 
+        // console.log('each line',line);
+        //kenapa kok ada yang punya path sama point ?
+        // console.log('count line ?',line.count)
+        //hanya yang punya path dan destination aja yang dibikin graph lainnya gak usah
         if(parseInt(line.count)) {
           Graph.lines.set(line.idline, line);
           linePromises.push(Core.instance().ajax().get(`m/x/mta/lineApi/getLine/${line.idline}`));
@@ -120,6 +127,8 @@ class App {
         }
       });
       Promise.all(linePromises).then(linepoints => {
+        console.log('linepoints',linepoints)
+        console.log('idlines',idlines)
         linepoints.forEach(points => Graph.buildLine(idlines.shift(), points));
       }, err => {
         (new CoreInfo(err)).show();
@@ -576,6 +585,7 @@ class Graph {
   static createPath(points) {
     let path = [], prevPoint = null;
     let distance = 0;
+    // console.log('createPath and point obect', points)
     for(let i = 0; i < points.length; i++) {
       let point = points[i];
       if (prevPoint == null) {
@@ -662,12 +672,20 @@ class Dijkstra {
       cost: 0,
       distance: 0
     }
+    console.log(source)
     Dijkstra.unvisited.add(source);
+    console.log('unvisited',Dijkstra.unvisited.size)
+    console.log(Graph.pathPoints);
     while(Dijkstra.unvisited.size > 0) {
       let current = Dijkstra.getMinimumCostPoint(Dijkstra.unvisited);
+      console.log('current', current);
       current.destinations.forEach((dest, key) => {
         let nextPoint = Graph.pathPoints.get(key);
-        if (nextPoint == undefined) console.log(key, current, dest, Graph.pathPoints);
+        console.log('nextPoint', nextPoint);
+        if (nextPoint == undefined){
+          console.log('undefined')
+          console.log(key, current, dest, Graph.pathPoints);
+        }
         if (!Dijkstra.visited.has(nextPoint)) {
           Dijkstra.calculateMinPrice(nextPoint, dest, current);
           Dijkstra.unvisited.add(nextPoint);
@@ -750,6 +768,8 @@ $(async () => {
   App.getLines();
 
   $('#mta-nav .btn-dijkstra').on('click', e => {
+    console.log('start bro');
+    var waktuMulai = performance.now();
 
     if (App.startMarker == null || App.endMarker == null) {
       (new CoreInfo('Please select start and stop location, by putting markers on a map.')).show();
@@ -773,10 +793,13 @@ $(async () => {
       distance: Number.MAX_VALUE
     }
     // re-create Graph with source and destination points included
+    console.log(Graph.lines)
     Graph.lines.forEach(line => {
+      console.log('recreate graph line :', line)
       line.path = Graph.createPath(line.points);
+      console.log('Created graph line :', line)
     });
-    // include source and destinations in path analysis
+    // // include source and destinations in path analysis
     Graph.pathPoints.set(source.idpoint, source);
     Graph.pathPoints.set(destination.idpoint, destination);
     Graph.buildInterconnections();
@@ -784,12 +807,12 @@ $(async () => {
     // App.drawLine(Graph.lines.get(source.idline));
     // App.drawLine(Graph.lines.get(destination.idline));
 
-    // console.log("S:", source);
-    // console.log("D:", destination);
+    console.log("S:", source);
+    console.log("D:", destination);
     
     Dijkstra.getCheapestPath(source);
     let steps = App.buildNavigationSteps(destination, Graph.pathPoints.get(destination.idpoint).cheapestPath);
-
+    console.log('steps:', steps);
     // remove source and destination points from Graph
     // if it is not a point in an interchange.
     delete source.isStop;
@@ -800,6 +823,15 @@ $(async () => {
     App.drawNavigationPath(steps);
     App.displayNavigationPath(steps);
 
+
+    var waktuSelesai = performance.now();
+    var lamaWaktu = waktuSelesai - waktuMulai;
+    var penggunaanMemori = performance.memory.usedJSHeapSize;
+    var informasiProses = performance.memory;
+    
+    console.log("Informasi proses:", informasiProses);
+    console.log("Penggunaan memori: " + penggunaanMemori + " bytes");
+    console.log("Lama waktu komputasi: " + lamaWaktu + " milidetik");
     
   });
 

@@ -7,6 +7,7 @@
 class App {
 
   static map;
+  static mapAco;
   static markers = new Map();
   static polylines = new Map();
   static networkPolylines = new Map();
@@ -39,7 +40,27 @@ class App {
         }]
       }]
     });
-    App.map.addListener('click', e => {
+
+    var infoWindow = new google.maps.InfoWindow;
+
+    // Create mapAco
+    App.mapAco = new Map(document.getElementById('mapAco'), {
+      center: malang,
+      zoom: 13,
+      clickableIcons: false,
+      styles: [{
+        featureType: "poi",
+        elementType: "labels",
+        stylers: [{
+          visibility: "off"
+        }]
+      }],
+      // draggable: false, // Make mapAco read-only
+      disableDefaultUI: true
+    });
+
+
+     App.map.addListener('click', e => {
       $('#mta-poly-context').hide();
       if (App.startMarker == null) {
         App.startMarker = new google.maps.Marker({
@@ -47,6 +68,15 @@ class App {
           position: e.latLng,
           draggable: true
         });
+        // Trigger the same click event on mapAco
+        if (App.mapAco) {
+          App.startMarker = new google.maps.Marker({
+            map: App.mapAco,
+            position: e.latLng,
+            draggable: false
+          });
+        }
+
         return;
       }
       if (App.endMarker == null) {
@@ -55,11 +85,42 @@ class App {
           position: e.latLng,
           draggable: true
         });
+        // Trigger the same click event on mapAco
+        if (App.mapAco) {
+          App.endMarker = new google.maps.Marker({
+            map: App.mapAco,
+            position: e.latLng,
+            draggable: false
+          });
+        }
+
         return;
       }
     });
 
-    var infoWindow = new google.maps.InfoWindow;
+    /**dragable */
+    // Handle drag event on map
+    var isDragging = false;
+    var lastDragPosition;
+    google.maps.event.addListener(App.map, 'dragstart', function() {
+      isDragging = true;
+      lastDragPosition = App.map.getCenter();
+    });
+    google.maps.event.addListener(App.map, 'dragend', function() {
+      isDragging = false;
+      var newDragPosition = App.map.getCenter();
+      var latDiff = newDragPosition.lat() - lastDragPosition.lat();
+      var lngDiff = newDragPosition.lng() - lastDragPosition.lng();
+      var newMapAcoCenter = App.mapAco.getCenter();
+      App.mapAco.setCenter({
+        lat: newMapAcoCenter.lat() + latDiff,
+        lng: newMapAcoCenter.lng() + lngDiff
+      });
+    });
+
+    // Make mapAco follow the initial position of map
+    App.mapAco.setCenter(App.map.getCenter());
+    /**end dragable */
 
     // Try HTML5 geolocation.
     if (navigator.geolocation) {
@@ -83,6 +144,7 @@ class App {
       // Browser doesn't support Geolocation
       App.handleLocationError(false, infoWindow, App.map.getCenter());
     }
+    
   }
 
   static handleLocationError(browserHasGeolocation, infoWindow, pos) {
@@ -129,10 +191,22 @@ class App {
       Promise.all(linePromises).then(linepoints => {
         console.log('linepoints',linepoints)
         console.log('idlines',idlines)
-        linepoints.forEach(points => Graph.buildLine(idlines.shift(), points));
+        linepoints.forEach(points => {
+          /**bisa di comment */
+          var currentDataline = {
+            idline: points[0].idline,
+            name: `-`,
+            linecolor: points[0].linecolor,
+            points: points
+          }
+          App.drawLineMap(currentDataline);
+          /**end bisa di comment */
+          Graph.buildLine(idlines.shift(), points)
+        });
       }, err => {
         (new CoreInfo(err)).show();
       });
+
     }, err => {
       (new CoreInfo(err)).show();
     });
@@ -293,6 +367,151 @@ class App {
       App.networkPolylines.set(line.idline, poly);
     } else {
       App.networkPolylines.get(line.idline).setMap(App.map);
+    }
+  }
+
+  static async drawLineMap(line) { // console.log(line);
+
+    if(line.points.length == 0) {
+      (new CoreInfo("This line has no route.")).show();
+      return;
+    }
+
+    const { Point } = await google.maps.importLibrary("core");
+    const lineSymbol = {
+      path: "M 0,-2 0,2",
+      strokeOpacity: 1,
+      scale: 3,
+    };
+
+    App.pointIcon = {  
+      path: "M-4,0a4,4 0 1,0 8,0a4,4 0 1,0 -8,0",
+      fillColor: line.linecolor,
+      fillOpacity: .5,
+      anchor: new Point(0,0),
+      strokeWeight: 0,
+    }
+    App.stopIcon = {  
+      path: "M -6,-6 v 12 h 12 v -12 z",
+      fillColor: '#FFFFFF',
+      fillOpacity: 1,
+      anchor: new Point(0,0),
+      strokeWeight: 3,
+      strokeColor: line.linecolor
+    }
+
+		// Create array of points
+    let path = [];
+
+    // Clean all previously created markers
+    // App.markers.forEach(marker => marker.setMap(null));
+
+    line.points.forEach(p => { // console.log(p.idpoint);
+      let pos = new google.maps.LatLng(p.lat, p.lng);
+      pos.idpoint = p.idpoint;
+      pos.isStop = parseInt(p.stop);
+      path.push(pos);
+
+      // if (!parseInt(p.stop)) return;
+      // Draw marker on Map
+      if (!App.markers.has(p.idpoint)) {
+        if (parseInt(p.stop)) {
+          var marker = new google.maps.Marker({
+            position: new google.maps.LatLng(p.lat, p.lng),
+            map: App.map,
+            icon: parseInt(p.stop) ? App.stopIcon : App.pointIcon,
+            idline: line.idline,
+            idpoint: p.idpoint,
+            isStop: parseInt(p.stop) ? true : false,
+            title: line.idline + ":" + line.name
+          });
+          var markerAco = new google.maps.Marker({
+            position: new google.maps.LatLng(p.lat, p.lng),
+            map: App.mapAco,
+            icon: parseInt(p.stop) ? App.stopIcon : App.pointIcon,
+            idline: line.idline,
+            idpoint: p.idpoint,
+            isStop: parseInt(p.stop) ? true : false,
+            title: line.idline + ":" + line.name
+          });
+          // Add marker to marker list
+          App.markers.set(p.idpoint, marker);
+          App.markers.set(p.idpoint, markerAco);
+        }
+      } else {
+        App.markers.get(p.idpoint).setMap(App.map);
+        App.markers.get(p.idpoint).setMap(App.mapAco);
+      }
+
+    });
+
+    // Draw current polyline
+    if (!App.polylines.has(line.idline)) {
+      let poly = new google.maps.Polyline({
+        path: path,
+        strokeColor: line.linecolor,
+        strokeOpacity: 0.5,
+        strokeWeight: 5,
+        idline: line.idline,
+        // editable: true,
+        // strokeOpacity: 0,
+        // icons: [
+        //   {
+        //     icon: lineSymbol,
+        //     offset: "0",
+        //     repeat: "20px",
+        //   },
+        // ]
+      });
+      let polyAco = new google.maps.Polyline({
+        path: path,
+        strokeColor: line.linecolor,
+        strokeOpacity: 0.5,
+        strokeWeight: 5,
+        idline: line.idline,
+        // editable: true,
+        // strokeOpacity: 0,
+        // icons: [
+        //   {
+        //     icon: lineSymbol,
+        //     offset: "0",
+        //     repeat: "20px",
+        //   },
+        // ]
+      });
+      poly.setMap(App.map);
+      polyAco.setMap(App.mapAco);
+      
+      App.focusTo(poly);
+      App.focusTo(polyAco);
+
+      poly.getPath().addListener('set_at', (index, vertex) => {
+        let p = poly.getPath().getAt(index);
+        Object.entries(vertex).forEach(([key, val], index) => {
+          if (typeof val != "function") p[key] = vertex[key];
+        })
+        if (p.isStop) App.markers.get(p.idpoint).setPosition(new google.maps.LatLng(p.lat(), p.lng()));
+        // console.log(p, vertex);
+      })
+      poly.addListener('dblclick', (e) => {
+        poly.setEditable(!poly.getEditable());
+        e.stop();
+      });
+      poly.addListener('contextmenu', (e) => {
+        if (poly.getEditable() && e.vertex) {
+          // console.warn(poly.getPath().getAt(e.vertex));
+          if(!poly.getPath().getAt(e.vertex).isStop) poly.getPath().removeAt(e.vertex);
+        } else if (!poly.getEditable()) {
+          $('#mta-poly-context').css('top', e.domEvent.clientY).css('left', e.domEvent.clientX).show();
+          $('#btn-save-line').attr('data-id', poly.idline);
+        }
+      });
+
+      App.polylines.set(line.idline, poly);
+    } else {
+      App.polylines.get(line.idline).setMap(App.map);
+      App.polylines.get(line.idline).setMap(App.mapAco);
+      App.focusTo(App.polylines.get(line.idline));
     }
   }
 
@@ -733,7 +952,6 @@ class Dijkstra {
 
 $(async () => {
   App.initMap();
-
   const { Point } = await google.maps.importLibrary("core");
   // App.pointIcon = {  
   //   path: "M-4,0a4,4 0 1,0 8,0a4,4 0 1,0 -8,0",
@@ -766,7 +984,7 @@ $(async () => {
     scale: 3,
   };
   App.getLines();
-
+  
   $('#mta-nav .btn-dijkstra').on('click', e => {
     console.log('start bro');
     var waktuMulai = performance.now();

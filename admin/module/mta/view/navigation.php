@@ -1,7 +1,10 @@
 <div id="mta-nav" class="p-3 border-top">
   <button class="btn btn-primary btn-dijkstra">Process</button>
 </div>
+<h5>DIJKSTRA</h5>
 <div id="map" class="flex-fill"></div>
+<h5>ACO</h5>
+<div id="mapAco" class="flex-fill"></div>
 <div id="mta-controls" class="p-3 border-top">
   <button id="btn-clear-map" class="btn btn-primary">Clear</button>
 </div>

@@ -3,7 +3,11 @@
   // Add other bootstrap parameters as needed, using camel case.
   // Use the 'v' parameter to indicate the version to load (alpha, beta, weekly, etc.)
 });
-
+var malang = {
+    lat: -7.9346600068216,
+    lng: 112.65868753195
+  };
+var setZoom = 30
 class App {
 
   static map;
@@ -23,14 +27,14 @@ class App {
 
     const { Map } = await google.maps.importLibrary("maps");
 
-    var malang = {
-      lat: -7.982379,
-      lng: 112.630321
-    };
+    // var malang = {
+    //   lat: -7.9346600068216,
+    //   lng: 112.65868753195
+    // };
     // Create a map object and specify the DOM element for display.
     App.map = new Map(document.getElementById('map'), {
       center: malang,
-      zoom: 13,
+      zoom: 30,
       clickableIcons: false,
       styles: [{
         featureType: "poi",
@@ -40,24 +44,25 @@ class App {
         }]
       }]
     });
+    console.log('zoom', setZoom)
 
     var infoWindow = new google.maps.InfoWindow;
 
     // Create mapAco
-    App.mapAco = new Map(document.getElementById('mapAco'), {
-      center: malang,
-      zoom: 13,
-      clickableIcons: false,
-      styles: [{
-        featureType: "poi",
-        elementType: "labels",
-        stylers: [{
-          visibility: "off"
-        }]
-      }],
-      // draggable: false, // Make mapAco read-only
-      disableDefaultUI: true
-    });
+    // App.mapAco = new Map(document.getElementById('mapAco'), {
+    //   center: malang,
+    //   zoom: 25,
+    //   clickableIcons: false,
+    //   styles: [{
+    //     featureType: "poi",
+    //     elementType: "labels",
+    //     stylers: [{
+    //       visibility: "off"
+    //     }]
+    //   }],
+    //   // draggable: false, // Make mapAco read-only
+    //   disableDefaultUI: true
+    // });
 
 
      App.map.addListener('click', e => {
@@ -69,13 +74,13 @@ class App {
           draggable: true
         });
         // Trigger the same click event on mapAco
-        if (App.mapAco) {
-          App.startMarker = new google.maps.Marker({
-            map: App.mapAco,
-            position: e.latLng,
-            draggable: false
-          });
-        }
+        // if (App.mapAco) {
+        //   App.startMarker = new google.maps.Marker({
+        //     map: App.mapAco,
+        //     position: e.latLng,
+        //     draggable: false
+        //   });
+        // }
 
         return;
       }
@@ -86,13 +91,13 @@ class App {
           draggable: true
         });
         // Trigger the same click event on mapAco
-        if (App.mapAco) {
-          App.endMarker = new google.maps.Marker({
-            map: App.mapAco,
-            position: e.latLng,
-            draggable: false
-          });
-        }
+        // if (App.mapAco) {
+        //   App.endMarker = new google.maps.Marker({
+        //     map: App.mapAco,
+        //     position: e.latLng,
+        //     draggable: false
+        //   });
+        // }
 
         return;
       }
@@ -111,15 +116,15 @@ class App {
       var newDragPosition = App.map.getCenter();
       var latDiff = newDragPosition.lat() - lastDragPosition.lat();
       var lngDiff = newDragPosition.lng() - lastDragPosition.lng();
-      var newMapAcoCenter = App.mapAco.getCenter();
-      App.mapAco.setCenter({
-        lat: newMapAcoCenter.lat() + latDiff,
-        lng: newMapAcoCenter.lng() + lngDiff
-      });
+      // var newMapAcoCenter = App.mapAco.getCenter();
+      // App.mapAco.setCenter({
+      //   lat: newMapAcoCenter.lat() + latDiff,
+      //   lng: newMapAcoCenter.lng() + lngDiff
+      // });
     });
 
     // Make mapAco follow the initial position of map
-    App.mapAco.setCenter(App.map.getCenter());
+    // App.mapAco.setCenter(App.map.getCenter());
     /**end dragable */
 
     // Try HTML5 geolocation.
@@ -136,7 +141,8 @@ class App {
           lng: 112.630321
         };
         App.map.setCenter(malang);
-        App.map.setZoom(13);
+        App.map.setZoom(setZoom);
+        console.log('zoom', setZoom)
       }, function () {
         App.handleLocationError(true, infoWindow, App.map.getCenter());
       });
@@ -152,12 +158,13 @@ class App {
     infoWindow.setContent(browserHasGeolocation ?
       'Error: The Geolocation service failed.' :
       'Error: Your browser doesn\'t support geolocation.');
-    var malang = {
-      lat: -7.982379,
-      lng: 112.630321
-    };
+    // var malang = {
+    //   lat: -7.982379,
+    //   lng: 112.630321
+    // };
     App.map.setCenter(malang);
-    App.map.setZoom(13);
+    App.map.setZoom(setZoom);
+    console.log('zoom', setZoom)
   }
 
   static getLines() {
@@ -192,10 +199,11 @@ class App {
         console.log('linepoints',linepoints)
         console.log('idlines',idlines)
         linepoints.forEach(points => {
+          console.log('points', points)
           /**bisa di comment */
           var currentDataline = {
             idline: points[0].idline,
-            name: `-`,
+            name: '-',
             linecolor: points[0].linecolor,
             points: points
           }
@@ -423,24 +431,24 @@ class App {
             idline: line.idline,
             idpoint: p.idpoint,
             isStop: parseInt(p.stop) ? true : false,
-            title: line.idline + ":" + line.name
+            title: `idline:${line.idline}, idpoints: ${p.idpoint}`
           });
-          var markerAco = new google.maps.Marker({
-            position: new google.maps.LatLng(p.lat, p.lng),
-            map: App.mapAco,
-            icon: parseInt(p.stop) ? App.stopIcon : App.pointIcon,
-            idline: line.idline,
-            idpoint: p.idpoint,
-            isStop: parseInt(p.stop) ? true : false,
-            title: line.idline + ":" + line.name
-          });
+          // var markerAco = new google.maps.Marker({
+          //   position: new google.maps.LatLng(p.lat, p.lng),
+          //   map: App.mapAco,
+          //   icon: parseInt(p.stop) ? App.stopIcon : App.pointIcon,
+          //   idline: line.idline,
+          //   idpoint: p.idpoint,
+          //   isStop: parseInt(p.stop) ? true : false,
+          //   title: line.idline + ":" + line.name
+          // });
           // Add marker to marker list
           App.markers.set(p.idpoint, marker);
-          App.markers.set(p.idpoint, markerAco);
+          // App.markers.set(p.idpoint, markerAco);
         }
       } else {
         App.markers.get(p.idpoint).setMap(App.map);
-        App.markers.get(p.idpoint).setMap(App.mapAco);
+        // App.markers.get(p.idpoint).setMap(App.mapAco);
       }
 
     });
@@ -480,7 +488,7 @@ class App {
         // ]
       });
       poly.setMap(App.map);
-      polyAco.setMap(App.mapAco);
+      // polyAco.setMap(App.mapAco);
       
       App.focusTo(poly);
       App.focusTo(polyAco);
@@ -510,7 +518,7 @@ class App {
       App.polylines.set(line.idline, poly);
     } else {
       App.polylines.get(line.idline).setMap(App.map);
-      App.polylines.get(line.idline).setMap(App.mapAco);
+      // App.polylines.get(line.idline).setMap(App.mapAco);
       App.focusTo(App.polylines.get(line.idline));
     }
   }
@@ -949,6 +957,7 @@ class Dijkstra {
   }
 
 }
+
 
 $(async () => {
   App.initMap();

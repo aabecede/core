@@ -739,6 +739,18 @@ class App {
     return App.steps;
   }
 
+  static buildNavigationStepsAco(destination, bestPath){
+    let color = null;
+    let idline = null;
+    let path = [];
+    pathSteps.push(destination);
+    App.steps = [];
+    App.stepPolylines.forEach((polyline, k) => {
+      polyline.setMap(null);
+      App.stepPolylines.delete(k);
+    });
+  }
+
   static drawWalkingPath(walkPath) {
     let walkPoly = new google.maps.Polyline({
       path: walkPath,
@@ -836,7 +848,7 @@ class App {
           break;
         case "line":
           let line = Graph.lines.get(step.idline);
-          console.log(step, line);
+          // console.log(step, line);
           let towards =
             line.direction === "O"
               ? line.name[line.name.length - 1]
@@ -1008,21 +1020,21 @@ class Dijkstra {
     console.log("source", source);
     Dijkstra.unvisited.add(source);
     console.log("unvisited", Dijkstra.unvisited.size);
-    console.log("pathPoints", Graph.pathPoints);
+    // console.log("pathPoints", Graph.pathPoints);
     while (Dijkstra.unvisited.size > 0) {
       let current = Dijkstra.getMinimumCostPoint(Dijkstra.unvisited);
-      console.log("current", current);
+      // console.log("current", current);
       current.destinations.forEach((dest, key) => {
         let nextPoint = Graph.pathPoints.get(key);
         // console.log('dest', dest);
         // console.log('key', key);
-        console.log("nextPoint", nextPoint);
+        // console.log("nextPoint", nextPoint);
         if (nextPoint == undefined) {
-          console.log("undefined");
+          // console.log("undefined");
           console.log(key, current, dest, Graph.pathPoints);
         }
         if (!Dijkstra.visited.has(nextPoint)) {
-          console.log("calculate min price");
+          // console.log("calculate min price");
           Dijkstra.calculateMinPrice(nextPoint, dest, current);
           Dijkstra.unvisited.add(nextPoint);
         }
@@ -1129,11 +1141,11 @@ $(async () => {
       distance: Number.MAX_VALUE,
     };
     // re-create Graph with source and destination points included
-    console.log(Graph.lines);
+    // console.log(Graph.lines);
     Graph.lines.forEach((line) => {
-      console.log("recreate graph line :", line);
+      // console.log("recreate graph line :", line);
       line.path = Graph.createPath(line.points);
-      console.log("Created graph line :", line);
+      // console.log("Created graph line :", line);
     });
     // // include source and destinations in path analysis
     Graph.pathPoints.set(source.idpoint, source);
@@ -1142,36 +1154,41 @@ $(async () => {
 
     // App.drawLine(Graph.lines.get(source.idline));
     // App.drawLine(Graph.lines.get(destination.idline));
-    console.log("start marker", [
-      {
-        lat: App.startMarker.position.lat(),
-        lng: App.startMarker.position.lng(),
-      },
-    ]);
-    console.log("end marker", [
-      {
-        lat: App.endMarker.position.lat(),
-        lng: App.endMarker.position.lng(),
-      },
-    ]);
+    // console.log("start marker", [
+    //   {
+    //     lat: App.startMarker.position.lat(),
+    //     lng: App.startMarker.position.lng(),
+    //   },
+    // ]);
+    // console.log("end marker", [
+    //   {
+    //     lat: App.endMarker.position.lat(),
+    //     lng: App.endMarker.position.lng(),
+    //   },
+    // ]);
     console.log("S:", source);
     console.log("D:", destination);
-    var sourceAco = source
+    // var sourceAco = source
 
     Dijkstra.getCheapestPath(source);
-    console.log(
-      "Graph.pathPoints.get(destination.idpoint)",
-      Graph.pathPoints.get(destination.idpoint)
-    );
-    console.log(
-      "graph path points cheapetstPath ",
-      Graph.pathPoints.get(destination.idpoint).cheapestPath
-    );
+    // console.log(
+    //   "Graph.pathPoints.get(destination.idpoint)",
+    //   Graph.pathPoints.get(destination.idpoint)
+    // );
+    // console.log(
+    //   "graph path points cheapetstPath ",
+    //   Graph.pathPoints.get(destination.idpoint).cheapestPath
+    // );
     let steps = App.buildNavigationSteps(
       destination,
       Graph.pathPoints.get(destination.idpoint).cheapestPath
     );
     console.log("steps:", steps);
+    var stepsDistance = 0;
+    $.each(steps, function (index, value) { 
+       stepsDistance += Graph.distance(value.from, value.to)
+    });
+    console.log('stepDistance', stepsDistance)
     // remove source and destination points from Graph
     // if it is not a point in an interchange.
     delete source.isStop;
@@ -1188,20 +1205,23 @@ $(async () => {
     var lamaWaktu = waktuSelesai - waktuMulai;
     var penggunaanMemori = performance.memory.usedJSHeapSize;
     var informasiProses = performance.memory;
-
+      // console.log();
     
     /**ACO */
     // Example usage with the provided data and settings
     console.log("start ACO");
     
     var waktuMulaiAco = performance.now();
-    console.log('Graph.pathPoints', Graph.pathPoints)
+    // console.log('Graph.pathPoints', Graph.pathPoints)
     
     const ants =  []
-    Graph.pathPoints.forEach(antData => {
-         ants.push(new Ant(antData.idpoint, antData.lat, antData.lng, antData.destinations))
-      });
-    console.log(ants)
+    ants.push(
+      new Ant(source.idpoint, source.lat, source.lng, source.destinations)
+    )
+    // .forEach(antData => {
+    //      ants.push(new Ant(antData.idpoint, antData.lat, antData.lng, antData.destinations))
+    //   });
+    // console.log(ants)
       // const ants = antDataArray.map((antData) => new Ant(antData.id, antData.lat, antData.long));
 
     const startLat = App.startMarker.position.lat()
@@ -1216,6 +1236,7 @@ $(async () => {
 
     const antColony = new AntColony(
       ants,
+      destination = new Ant(destination.idpoint, destination.lat, destination.lng, destination.destinations),
       startLat,
       startLong,
       endLat,
@@ -1240,6 +1261,14 @@ $(async () => {
     console.log("Informasi proses ACO:", informasiProsesAco);
     console.log("Penggunaan memori ACO: " + penggunaanMemoriAco + " bytes");
     console.log("Lama waktu komputasi ACO: " + lamaWaktuAco + " milidetik");
+    // console.log('arr_destination',antColony.arrDataDestinations);
+    // console.log('arr_destination_sort distance',antColony.arrDataDestinations.sort((a,b) => a.distance - b.distance));
+
+    // let stepsAco = App.buildNavigationSteps(
+    //   destination,
+    //   Graph.pathPoints.get(destination.idpoint).cheapestPath
+    // );
+    // App.drawNavigationPath(stepsAco);
   });
 
   $("#btn-clear-map").on("click", () => {
@@ -1286,22 +1315,25 @@ $(async () => {
     distanceTo(otherAnt) {
       const latDiff = this.lat - otherAnt.lat;
       const longDiff = this.long - otherAnt.long;
-      return Math.sqrt(latDiff * latDiff + longDiff * longDiff);
+      return Math.sqrt((latDiff * latDiff) + (longDiff * longDiff)) /0.00000898448;
     }
   }
 
   class AntColony {
     constructor(
-      ants,
+      source,
+      destination,
       startLat,
       startLong,
       endLat,
       endLong,
       iterations,
       evaporationRate,
-      depositAmount
+      depositAmount,
+      ants = null
     ) {
-      this.ants = ants;
+      this.ants = source;
+      this.destination = destination;
       this.startMarker = new Ant(-1, startLat, startLong);
       this.endMarker = new Ant(-2, endLat, endLong);
       this.pheromoneMatrix = this.initPheromoneMatrix();
@@ -1321,7 +1353,7 @@ $(async () => {
     }
 
     calculateDistance(ant1, ant2) {
-      // console.log(ant1, ant2)
+      // console.log('ant1 ant 2',ant1, ant2)
       return ant1.distanceTo(ant2);
     }
 
@@ -1331,11 +1363,7 @@ $(async () => {
         this.updatePheromoneMatrix();
         this.updateBestPath();
       }
-      return this.bestPath;
-    }
-
-    getArrDataDestinations(){
-      return this.arrDataDestinations
+      return [this.bestPath, this.bestDistance];
     }
 
     moveAnts() {
@@ -1373,23 +1401,21 @@ $(async () => {
       /**
        * count every single destionations from ants and get the bestway point
        */
-      const path = [this.startMarker, ...this.ants, this.endMarker];
-      const distance = this.calculatePathDistance(path); //first init distance
-      console.log('distance',distance);
-      console.log('distancePath',path);
-      if (distance < this.bestDistance) {
-        this.bestDistance = distance;
-        this.bestPath = path;
-      }
+      // const path = [this.startMarker, ...this.ants, this.destination, this.endMarker];
+      // const distance = this.calculatePathDistance(path); //first init distance
+      // console.log('distance',distance);
+      // console.log('distancePath',path);
+      
       this.ants.forEach((value, key) => {
           if (value.destinations != undefined) {
-            this.loopDestinations(value.destinations, value.idpoint)
+            this.loopDestinations(value, value.destinations, value.id)
           }
       });
+
     }
 
 
-    loopDestinations(destinations, idpoint){
+    loopDestinations(pathSource, destinations, idpoint){
       var dataDestinations = []
       destinations.forEach((values, key) => {
         var antData = Graph.pathPoints.get(key);
@@ -1398,9 +1424,10 @@ $(async () => {
         }
       })
       if(dataDestinations.length > 0) {
-        const path = [this.startMarker, ...dataDestinations, this.endMarker];
-        console.log('pathEachAnts', path)
+        const path = [this.startMarker, pathSource, ...dataDestinations, this.destination, this.endMarker];
+        // console.log('pathEachAnts', path)
         const distance = this.calculatePathDistance(path)
+        // console.log('distance ?', distance)
         this.arrDataDestinations.push({
           id: idpoint,
           distance:distance,
@@ -1408,65 +1435,29 @@ $(async () => {
         })
         if (distance < this.bestDistance) {
           this.bestDistance = distance;
-          this.bestPath = path;
+          var jsonObject = path.map(JSON.stringify);
+          var uniqueSet = new Set(jsonObject);
+          var uniqueArray = Array.from(uniqueSet).map(JSON.parse);
+          this.bestPath = uniqueArray;
         }
+        
       }
     }
 
     calculatePathDistance(path) {
       let distance = 0;
       for (let i = 0; i < path.length - 1; i++) {
+        // console.log(path[i+1], this.destination)
+        // if(i+1 == path.length){
+        //   return distance;
+        // }
         distance += this.calculateDistance(path[i], path[i + 1]);
+        // console.log('distance',distance)
       }
-      console.log('path',path)
-      console.log('distance',distance)
+      // console.log('path',path)
+      // console.log('distance',distance)
       return distance;
     }
   }
 
-
-
-
-  console.log("start ACO");
-    
-    var waktuMulaiAco = performance.now();
-    console.log('Graph.pathPoints', Graph.pathPoints)
-    
-    const ants =  []
-    Graph.pathPoints.forEach(antData => {
-         ants.push(new Ant(antData.idpoint, antData.lat, antData.lng, antData.destinations))
-      });
-    console.log(ants)
-      // const ants = antDataArray.map((antData) => new Ant(antData.id, antData.lat, antData.long));
-
-    const startLat = -7.944904620693875
-    const startLong = 112.64900743961445
-    const endLat = -7.956125369815722
-    const endLong = 112.64360010624043
-
-    // Settings for the ACO algorithm
-    const iterations = 10;
-    const evaporationRate = 0.5;
-    const depositAmount = 1;
-
-    const antColony = new AntColony(
-      ants,
-      startLat,
-      startLong,
-      endLat,
-      endLong,
-      iterations,
-      evaporationRate,
-      depositAmount
-    );
-
-    const bestPath = antColony.run();
-    var waktuSelesaiAco = performance.now();
-    var lamaWaktuAco = waktuSelesaiAco - waktuMulaiAco;
-    var penggunaanMemoriAco = performance.memory.usedJSHeapSize;
-    var informasiProsesAco = performance.memory;
-    console.log("Best Path ACO:", bestPath);
-    console.log("Informasi proses ACO:", informasiProsesAco);
-    console.log("Penggunaan memori ACO: " + penggunaanMemoriAco + " bytes");
-    console.log("Lama waktu komputasi ACO: " + lamaWaktuAco + " milidetik");
 });

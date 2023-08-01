@@ -1,5 +1,6 @@
 <div id="mta-nav" class="p-3 border-top">
   <button class="btn btn-primary btn-dijkstra">Process</button>
+  <button class="btn btn-primary" id="btn-generateRandom">Generate Random</button>
 </div>
 <h5>DIJKSTRA</h5>
 <div id="map" class="flex-fill"></div>

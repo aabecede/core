@@ -41,7 +41,7 @@ var malang = {
   lat: -7.9346600068216,
   lng: 112.65868753195,
 };
-var setZoom = 30;
+var setZoom = 18;
 class App {
   static map;
   static mapAco;
@@ -163,7 +163,7 @@ class App {
     /**end dragable */
 
     // Try HTML5 geolocation.
-    if (navigator.geolocation) {
+    if (navigator?.geolocation) {
       navigator.geolocation.getCurrentPosition(
         function (position) {
           var pos = {
@@ -973,7 +973,7 @@ class Graph {
     return (
       Math.sqrt(
         Math.pow(pointA.lat - pointB.lat, 2) +
-          Math.pow(pointA.lng - pointB.lng, 2)
+          Math.pow((pointA.lng ?? pointA.long) - (pointB.lng ?? pointB.long), 2)
       ) / Graph.oneMeterInDegree
     );
   }
@@ -1112,7 +1112,7 @@ $(async () => {
     scale: 3,
   };
   App.getLines();
-
+  let dataCollect = [];
   $("#mta-nav .btn-dijkstra").on("click", (e) => {
     console.log("start bro");
     var waktuMulai = performance.now();
@@ -1264,12 +1264,71 @@ $(async () => {
     // console.log('arr_destination',antColony.arrDataDestinations);
     // console.log('arr_destination_sort distance',antColony.arrDataDestinations.sort((a,b) => a.distance - b.distance));
 
+    // console.log(bestPath, bestPath[0][0])
+    dataCollect.push({
+      Dijkstra: {
+        jumlahTitik : steps.length,
+        jarak: stepsDistance,
+        waktuKomputasi: waktuSelesai,
+        memori: penggunaanMemori,
+        jarakTanpaTitik: Graph.distance(bestPath[0][0],bestPath[0][bestPath[0].length-1]),
+        detail: steps,
+      },
+      ACO:{
+        jumlahTitik: bestPath[0].length,
+        jarak: bestPath[1],
+        waktuKomputasi: waktuSelesaiAco,
+        memori: penggunaanMemoriAco,
+        jarakTanpaTitik: Graph.distance(bestPath[0][0],bestPath[0][bestPath[0].length-1]),
+        detail: bestPath,
+      }
+    })
+
+    console.log(dataCollect)
     // let stepsAco = App.buildNavigationSteps(
     //   destination,
     //   Graph.pathPoints.get(destination.idpoint).cheapestPath
     // );
     // App.drawNavigationPath(stepsAco);
   });
+
+  function getRandomNumber(min, max) {
+    return Math.random() * (max - min) + min;
+  }
+  function getRandomLat(){
+    return getRandomNumber(-8.0229654946782, -7.9427835950051);
+  }
+  function getRandomLong(){
+    return getRandomNumber(112.61007785797, 112.65068113804);
+  }
+  $('#btn-generateRandom').on('click', function(){
+    let dataLatLong = [
+      {
+        
+          start:{
+            lat: getRandomLat(),
+            lng: getRandomLong()
+          },
+          end:{
+            lat: getRandomLat(),
+            lng: getRandomLong()
+          },
+      },
+    ];
+
+    App.startMarker = new google.maps.Marker({
+          map: App.map,
+          position: dataLatLong[0].start,
+          draggable: true,
+        });
+    App.endMarker = new google.maps.Marker({
+              map: App.map,
+              position: dataLatLong[0].end,
+              draggable: true,
+            });
+    $('.btn-dijkstra').trigger('click')
+    // console.log(dataLatLong, App.startMarker, App.endMarker);
+  })
 
   $("#btn-clear-map").on("click", () => {
     App.polylines.forEach((poly) => poly.setMap(null));

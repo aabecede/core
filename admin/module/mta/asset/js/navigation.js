@@ -55,6 +55,7 @@ class App {
   static stopIcon;
   static startMarker = null;
   static endMarker = null;
+  static allPointsLine = []
 
   static async initMap() {
     const { Map } = await google.maps.importLibrary("maps");
@@ -257,6 +258,7 @@ class App {
                   linecolor: points[0].linecolor,
                   points: points,
                 };
+                this.allPointsLine.push(points)
                 App.drawLineMap(currentDataline);
                 /**end bisa di comment */
                 Graph.buildLine(idlines.shift(), points);
@@ -1096,6 +1098,7 @@ $(async () => {
   //   strokeWeight: 3,
   //   strokeColor: line.linecolor
   // }
+  var waktuMulai = performance.now();
   App.interchangeIcon = {
     path: "M-6,0a6,6 0 1,0 12,0a6,6 0 1,0 -12,0",
     fillColor: "#FFFFFF",
@@ -1112,6 +1115,9 @@ $(async () => {
     scale: 3,
   };
   App.getLines();
+  var waktuSelesai = performance.now();
+  var waktu = waktuSelesai - waktuMulai
+  console.log('waktu',waktu)
   let dataCollect = [];
   $("#mta-nav .btn-dijkstra").on("click", (e) => {
     console.log("start bro");
@@ -1175,10 +1181,10 @@ $(async () => {
     //   "Graph.pathPoints.get(destination.idpoint)",
     //   Graph.pathPoints.get(destination.idpoint)
     // );
-    // console.log(
-    //   "graph path points cheapetstPath ",
-    //   Graph.pathPoints.get(destination.idpoint).cheapestPath
-    // );
+    console.log(
+      "graph path points cheapetstPath ",
+      Graph.pathPoints.get(destination.idpoint).cheapestPath
+    );
     let steps = App.buildNavigationSteps(
       destination,
       Graph.pathPoints.get(destination.idpoint).cheapestPath
@@ -1189,17 +1195,18 @@ $(async () => {
        stepsDistance += Graph.distance(value.from, value.to)
     });
     console.log('stepDistance', stepsDistance)
+    /** jangan lupa di uncomment */
     // remove source and destination points from Graph
     // if it is not a point in an interchange.
-    delete source.isStop;
-    delete destination.isStop;
-    if (!parseInt(source.idinterchange) > 0)
-      Graph.pathPoints.delete(source.idpoint);
-    if (!parseInt(destination.idinterchange) > 0)
-      Graph.pathPoints.delete(destination.idpoint);
+    // delete source.isStop;
+    // delete destination.isStop;
+    // if (!parseInt(source.idinterchange) > 0)
+    //   Graph.pathPoints.delete(source.idpoint);
+    // if (!parseInt(destination.idinterchange) > 0)
+    //   Graph.pathPoints.delete(destination.idpoint);
 
-    App.drawNavigationPath(steps);
-    App.displayNavigationPath(steps);
+    // App.drawNavigationPath(steps);
+    // App.displayNavigationPath(steps);
 
     var waktuSelesai = performance.now();
     var lamaWaktu = waktuSelesai - waktuMulai;
@@ -1213,16 +1220,23 @@ $(async () => {
     
     var waktuMulaiAco = performance.now();
     // console.log('Graph.pathPoints', Graph.pathPoints)
-    
-    const ants =  []
-    ants.push(
-      new Ant(source.idpoint, source.lat, source.lng, source.destinations)
-    )
-    // .forEach(antData => {
-    //      ants.push(new Ant(antData.idpoint, antData.lat, antData.lng, antData.destinations))
-    //   });
-    // console.log(ants)
-      // const ants = antDataArray.map((antData) => new Ant(antData.id, antData.lat, antData.long));
+    // return console.log(Graph.pathPoints.get(source.idpoint))
+    /**
+     * combine all path
+     */
+    const combinedArray = [].concat(...App.allPointsLine);
+    const ants =  combinedArray.map(data => {
+      const ant = new Ant(
+        data.idpoint,
+        data.idline,
+        data.idinterchange,
+        data.lat,
+        data.lng,
+        data.stop,
+        data.sequence
+      );
+      return ant;
+    });
 
     const startLat = App.startMarker.position.lat()
     const startLong = App.startMarker.position.lng()
@@ -1234,55 +1248,59 @@ $(async () => {
     const evaporationRate = 0.5;
     const depositAmount = 1;
 
+    // return console.log(destination.destinations, Graph.pathPoints.get(destination.idpoint))
     const antColony = new AntColony(
       ants,
-      destination = new Ant(destination.idpoint, destination.lat, destination.lng, destination.destinations),
+      startSource = source,
+      endSource = destination,
       startLat,
       startLong,
       endLat,
       endLong,
       iterations,
       evaporationRate,
-      depositAmount
+      depositAmount,
+      resultDijkstra = Graph.pathPoints.get(destination.idpoint).cheapestPath
     );
 
     const bestPath = antColony.run();
-    var waktuSelesaiAco = performance.now();
-    var lamaWaktuAco = waktuSelesaiAco - waktuMulaiAco;
-    var penggunaanMemoriAco = performance.memory.usedJSHeapSize;
-    var informasiProsesAco = performance.memory;
-    /**end ACO */
 
-    console.log("Informasi proses:", informasiProses);
-    console.log("Penggunaan memori: " + penggunaanMemori + " bytes");
-    console.log("Lama waktu komputasi: " + lamaWaktu + " milidetik");
+    // var waktuSelesaiAco = performance.now();
+    // var lamaWaktuAco = waktuSelesaiAco - waktuMulaiAco;
+    // var penggunaanMemoriAco = performance.memory.usedJSHeapSize;
+    // var informasiProsesAco = performance.memory;
+    // /**end ACO */
 
-    console.log("Best Path ACO:", bestPath);
-    console.log("Informasi proses ACO:", informasiProsesAco);
-    console.log("Penggunaan memori ACO: " + penggunaanMemoriAco + " bytes");
-    console.log("Lama waktu komputasi ACO: " + lamaWaktuAco + " milidetik");
+    // console.log("Informasi proses:", informasiProses);
+    // console.log("Penggunaan memori: " + penggunaanMemori + " bytes");
+    // console.log("Lama waktu komputasi: " + lamaWaktu + " milidetik");
+
+    // console.log("Best Path ACO:", bestPath);
+    // console.log("Informasi proses ACO:", informasiProsesAco);
+    // console.log("Penggunaan memori ACO: " + penggunaanMemoriAco + " bytes");
+    // console.log("Lama waktu komputasi ACO: " + lamaWaktuAco + " milidetik");
     // console.log('arr_destination',antColony.arrDataDestinations);
     // console.log('arr_destination_sort distance',antColony.arrDataDestinations.sort((a,b) => a.distance - b.distance));
 
     // console.log(bestPath, bestPath[0][0])
-    dataCollect.push({
-      Dijkstra: {
-        jumlahTitik : steps.length,
-        jarak: stepsDistance,
-        waktuKomputasi: waktuSelesai,
-        memori: penggunaanMemori,
-        jarakTanpaTitik: Graph.distance(bestPath[0][0],bestPath[0][bestPath[0].length-1]),
-        detail: steps,
-      },
-      ACO:{
-        jumlahTitik: bestPath[0].length,
-        jarak: bestPath[1],
-        waktuKomputasi: waktuSelesaiAco,
-        memori: penggunaanMemoriAco,
-        jarakTanpaTitik: Graph.distance(bestPath[0][0],bestPath[0][bestPath[0].length-1]),
-        detail: bestPath,
-      }
-    })
+    // dataCollect.push({
+    //   Dijkstra: {
+    //     jumlahTitik : steps.length,
+    //     jarak: stepsDistance,
+    //     waktuKomputasi: waktuSelesai,
+    //     memori: penggunaanMemori,
+    //     jarakTanpaTitik: Graph.distance(bestPath[0][0],bestPath[0][bestPath[0].length-1]),
+    //     detail: steps,
+    //   },
+    //   ACO:{
+    //     jumlahTitik: bestPath[0].length,
+    //     jarak: bestPath[1],
+    //     waktuKomputasi: waktuSelesaiAco,
+    //     memori: penggunaanMemoriAco,
+    //     jarakTanpaTitik: Graph.distance(bestPath[0][0],bestPath[0][bestPath[0].length-1]),
+    //     detail: bestPath,
+    //   }
+    // })
 
     console.log(dataCollect)
     // let stepsAco = App.buildNavigationSteps(
@@ -1306,12 +1324,16 @@ $(async () => {
       {
         
           start:{
-            lat: getRandomLat(),
-            lng: getRandomLong()
+            lat: -7.991416543162467,
+            lng: 112.6282960930214
+            // lat: getRandomLat(),
+            // lng: getRandomLong()
           },
           end:{
-            lat: getRandomLat(),
-            lng: getRandomLong()
+            lat: -7.9759322351900614,
+            lng: 112.64599230261102
+            // lat: getRandomLat(),
+            // lng: getRandomLong()
           },
       },
     ];
@@ -1341,12 +1363,16 @@ $(async () => {
    * ACOO
    */
   class Ant {
-    constructor(id, lat, long, destinations = []) {
-      this.id = id;
-      this.lat = lat;
-      this.long = long;
-      this.destinations = destinations
+    constructor(idpoint, idline, idinterchange, lat, long, stop, sequence) {
+      this.idpoint = idpoint,
+      this.idline = idline,
+      this.idinterchange = idinterchange,
+      this.lat = lat,
+      this.long = long,
+      this.stop = stop,
+      this.sequence = sequence,
       this.visited = false;
+      this.prevPath = []
     }
 
     visit() {
@@ -1380,143 +1406,159 @@ $(async () => {
 
   class AntColony {
     constructor(
-      source,
-      destination,
-      startLat,
-      startLong,
-      endLat,
-      endLong,
-      iterations,
-      evaporationRate,
-      depositAmount,
-      ants = null
-    ) {
-      this.ants = source;
-      this.destination = destination;
-      this.startMarker = new Ant(-1, startLat, startLong);
-      this.endMarker = new Ant(-2, endLat, endLong);
-      this.pheromoneMatrix = this.initPheromoneMatrix();
-      this.bestPath = null;
-      this.bestDistance = Infinity;
-      this.iterations = iterations;
-      this.evaporationRate = evaporationRate;
-      this.depositAmount = depositAmount;
-      this.arrDataDestinations = [];
+        ants,
+        startSource,
+        endSource,
+        startLat,
+        startLong,
+        endLat,
+        endLong,
+        iterations,
+        evaporationRate,
+        depositAmount,
+        resultDijkstra
+      ) {
+        this.ants = ants;
+        this.startSource = startSource;
+        this.endSource = endSource;
+        this.startLat = startLat;
+        this.startLong = startLong;
+        this.endLat = endLat;
+        this.endLong = endLong;
+        this.iterations = iterations;
+        this.evaporationRate = evaporationRate;
+        this.depositAmount = depositAmount;
+        this.resultDijkstra = resultDijkstra;
+        this.bestPathDijkstra = [];
+        this.prevPathAnt = [];
+
+        this.pheromoneLevels = {}; // Pheromone levels on edges
+        this.initializePheromoneLevels();
     }
 
-    initPheromoneMatrix() {
-      const numAnts = this.ants.length + 2;
-      return Array.from({ length: numAnts }, () =>
-        Array.from({ length: numAnts }, () => 1)
-      );
-    }
+    // idPointDijkstra(){
+    //   return this.resultDijkstra.map(item=>item.idpoint);
+    // }
 
-    calculateDistance(ant1, ant2) {
-      // console.log('ant1 ant 2',ant1, ant2)
-      return ant1.distanceTo(ant2);
+    initializePheromoneLevels() {
+        // Initialize pheromone levels on edges to a small positive value
+        // You would need to implement this based on your specific graph
+        // For simplicity, let's assume a simple representation
+        this.ants.forEach(ant => {
+            this.pheromoneLevels[ant.id] = {};
+            this.ants.forEach(otherAnt => {
+                if (ant !== otherAnt) {
+                    this.pheromoneLevels[ant.id][otherAnt.id] = 0.01;
+                }
+            });
+        });
     }
 
     run() {
-      for (let i = 0; i < this.iterations; i++) {
-        this.moveAnts();
-        this.updatePheromoneMatrix();
-        this.updateBestPath();
-      }
-      return [this.bestPath, this.bestDistance];
-    }
-
-    moveAnts() {
-      this.ants.forEach((ant) => {
-        // console.log('moveants', ant)
-        while (!ant.isVisited()) {
-          const nextAnt = this.selectNextAnt(ant);
-          ant.visit();
-          ant = nextAnt;
+        // Implementation of ACO algorithm
+        for (let i = 0; i < this.iterations; i++) {
+          console.log('loop------', i)
+          this.bestPathDijkstra = [];
+          this.prevPathAnt = [];
+          var firstAnt = this.ants.find(ant => ant.idpoint === this.startSource.idpoint);
+          var pathAnt = this.moveAnt(firstAnt)
+          this.resetVisitAnt()
+          var sorted = this.bestPathDijkstra.slice().sort((a, b) => a - b);
+          console.log(this.prevPathAnt.length, sorted)
+          // var tempAnt = []
+          //   this.ants.forEach(ant => {
+          //       var currentAnt = this.moveAnt(ant);
+          //       if(currentAnt === false){
+          //         return false;
+          //       }
+          //       // tempAnt.push(currentAnt);
+          //       // currentAnt.prevPath.push(tempAnt);
+          //       console.log(ant, currentAnt)
+          //       // if(ant.)
+          //   });
+          //   this.updatePheromoneLevels();
         }
-      });
+        // ...
+        // Modify and implement the ACO algorithm logic as per your needs
+        // ...
     }
 
-    selectNextAnt(currentAnt) {
-      // You can implement the ant selection logic here, e.g., using pheromone levels and heuristic information
-      // For simplicity, we'll just choose the next unvisited ant at random
-      const unvisitedAnts = this.ants.filter((ant) => !ant.isVisited());
-      const randomIndex =  Math.floor(Math.random() * unvisitedAnts.length);
-      return unvisitedAnts[randomIndex];
-    }
-
-    updatePheromoneMatrix() {
-      // You can implement the pheromone update logic here
-      // For simplicity, we'll just use a constant evaporation rate and deposit a fixed amount of pheromone on each path
-
-      this.pheromoneMatrix.forEach((row, i) => {
-        row.forEach((_, j) => {
-          this.pheromoneMatrix[i][j] *= 1 - this.evaporationRate;
-          this.pheromoneMatrix[i][j] += this.depositAmount;
-        });
-      });
-    }
-
-    updateBestPath() {
-      /**
-       * count every single destionations from ants and get the bestway point
-       */
-      // const path = [this.startMarker, ...this.ants, this.destination, this.endMarker];
-      // const distance = this.calculatePathDistance(path); //first init distance
-      // console.log('distance',distance);
-      // console.log('distancePath',path);
-      
-      this.ants.forEach((value, key) => {
-          if (value.destinations != undefined) {
-            this.loopDestinations(value, value.destinations, value.id)
+    moveAnt(ant) {
+        // Implementation of ant movement logic
+        if(this.resultDijkstra.map(item=>item.idpoint).includes(ant.idpoint)){
+          this.bestPathDijkstra.push(ant.idpoint);
+          const inArray = this.resultDijkstra.map(item=>item.idpoint).some(innerArray =>
+              JSON.stringify(innerArray) === JSON.stringify([...new Set(this.bestPathDijkstra)])
+            );
+          if(inArray){
+            return false;
           }
-      });
-
-    }
-
-
-    loopDestinations(pathSource, destinations, idpoint){
-      var dataDestinations = []
-      destinations.forEach((values, key) => {
-        var antData = Graph.pathPoints.get(key);
-        if(antData != undefined) {
-          dataDestinations.push(new Ant(antData.idpoint, antData.lat, antData.lng, antData.destinations))
         }
-      })
-      if(dataDestinations.length > 0) {
-        const path = [this.startMarker, pathSource, ...dataDestinations, this.destination, this.endMarker];
-        // console.log('pathEachAnts', path)
-        const distance = this.calculatePathDistance(path)
-        // console.log('distance ?', distance)
-        this.arrDataDestinations.push({
-          id: idpoint,
-          distance:distance,
-          path:path,
-        })
-        if (distance < this.bestDistance) {
-          this.bestDistance = distance;
-          var jsonObject = path.map(JSON.stringify);
-          var uniqueSet = new Set(jsonObject);
-          var uniqueArray = Array.from(uniqueSet).map(JSON.parse);
-          this.bestPath = uniqueArray;
+        // Modify and implement the ant movement logic as per your needs
+        // ...
+        const unvisitedAnts = this.ants.filter(otherAnt => !otherAnt.isVisited());
+        if (unvisitedAnts.length === 0) {
+            return false; // All nodes visited, return
         }
-        
-      }
-    }
 
-    calculatePathDistance(path) {
-      let distance = 0;
-      for (let i = 0; i < path.length - 1; i++) {
-        // console.log(path[i+1], this.destination)
-        // if(i+1 == path.length){
-        //   return distance;
+        // if(ant.idpoint == this.endSource.idpoint){
+        //   return false;
         // }
-        distance += this.calculateDistance(path[i], path[i + 1]);
-        // console.log('distance',distance)
-      }
-      // console.log('path',path)
-      // console.log('distance',distance)
-      return distance;
+
+        // Select the next node based on pheromone levels and a heuristic
+        const nextNode = this.selectNextNode(ant, unvisitedAnts);
+        // console.log('ant', ant)
+        // console.log('nextNode', nextNode)
+        ant.visit();
+        this.prevPathAnt.push(ant)
+
+        // Move to the next node
+        const nextAnt = this.moveAnt(nextNode)
+        if(nextAnt == false){
+          return false;
+        }
+
+        return ant
     }
-  }
+
+    selectNextNode(ant, unvisitedAnts) {
+        // Implementation of node selection logic
+        // You can use a combination of pheromone levels and a heuristic
+        // to determine the next node the ant should move to
+        // ...
+
+        // For this example, let's simply choose the next unvisited node randomly
+        const randomIndex = Math.floor(Math.random() * unvisitedAnts.length);
+        return unvisitedAnts[randomIndex];
+    }
+
+    updatePheromoneLevels() {
+        // Update pheromone levels based on ant paths and evaporation
+        // ...
+        // Modify and implement the pheromone update logic as per your needs
+        // ...
+        Object.keys(this.pheromoneLevels).forEach(antId => {
+            Object.keys(this.pheromoneLevels[antId]).forEach(otherAntId => {
+                this.pheromoneLevels[antId][otherAntId] *= (1 - this.evaporationRate);
+            });
+        });
+
+        // Deposit pheromone on edges of ants' paths
+        this.ants.forEach(ant => {
+            // For simplicity, let's assume ant.path is an array of visited nodes
+            for (let i = 1; i < ant.prevPath.length; i++) {
+                const fromNode = ant.prevPath[i - 1];
+                const toNode = ant.prevPath[i];
+                this.pheromoneLevels[fromNode.id][toNode.id] += this.depositAmount;
+            }
+        });
+    }
+
+    resetVisitAnt(){
+      this.ants.forEach(ant => {
+        ant.visited = false;
+      });
+    }
+}
 
 });

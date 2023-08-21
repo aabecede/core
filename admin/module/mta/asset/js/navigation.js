@@ -1225,32 +1225,36 @@ $(async () => {
      * combine all path
      */
     const combinedArray = [].concat(...App.allPointsLine);
+    const antsMap = {};
     const ants =  combinedArray.map(data => {
       const ant = new Ant(
         data.idpoint,
         data.idline,
         data.idinterchange,
+        data.destinations ?? [],
         data.lat,
         data.lng,
         data.stop,
         data.sequence
       );
+      antsMap[data.idpoint] = ant;
       return ant;
     });
-
+    console.log(ants)
+    console.log(antsMap)
     const startLat = App.startMarker.position.lat()
     const startLong = App.startMarker.position.lng()
     const endLat = App.endMarker.position.lat()
     const endLong = App.endMarker.position.lng()
 
     // Settings for the ACO algorithm
-    const iterations = 10;
+    const iterations = 2;
     const evaporationRate = 0.5;
     const depositAmount = 1;
 
     // return console.log(destination.destinations, Graph.pathPoints.get(destination.idpoint))
     const antColony = new AntColony(
-      ants,
+      antsMap,
       startSource = source,
       endSource = destination,
       startLat,
@@ -1261,6 +1265,7 @@ $(async () => {
       evaporationRate,
       depositAmount,
       resultDijkstra = Graph.pathPoints.get(destination.idpoint).cheapestPath
+      // antsMap
     );
 
     const bestPath = antColony.run();
@@ -1326,12 +1331,16 @@ $(async () => {
           start:{
             lat: -7.991416543162467,
             lng: 112.6282960930214
+            // lat: -7.9414208198425, 
+            // lng: 112.64131486416
             // lat: getRandomLat(),
             // lng: getRandomLong()
           },
           end:{
             lat: -7.9759322351900614,
             lng: 112.64599230261102
+            // lat: -7.9441038621459,
+            // lng: 112.6199503988
             // lat: getRandomLat(),
             // lng: getRandomLong()
           },
@@ -1362,16 +1371,28 @@ $(async () => {
   /**
    * ACOO
    */
+  function hasDuplicates(array) {
+  const valueSet = new Set();
+  for (const value of array) {
+    if (valueSet.has(value)) {
+      console.log('duplicate', value)
+      // return true; // Duplicate found
+    }
+    valueSet.add(value);
+  }
+  return false; // No duplicates found
+}
   class Ant {
-    constructor(idpoint, idline, idinterchange, lat, long, stop, sequence) {
+    constructor(idpoint, idline, idinterchange, nextInterchange = [], lat, long, stop, sequence) {
       this.idpoint = idpoint,
       this.idline = idline,
       this.idinterchange = idinterchange,
+      this.nextInterchange = nextInterchange,
       this.lat = lat,
       this.long = long,
       this.stop = stop,
       this.sequence = sequence,
-      this.visited = false;
+      this.visited = false,
       this.prevPath = []
     }
 
@@ -1417,6 +1438,7 @@ $(async () => {
         evaporationRate,
         depositAmount,
         resultDijkstra
+        // antsMap
       ) {
         this.ants = ants;
         this.startSource = startSource;
@@ -1432,8 +1454,13 @@ $(async () => {
         this.bestPathDijkstra = [];
         this.prevPathAnt = [];
 
+        this.indexMove = 0;
+        this.antsPath = {};
         this.pheromoneLevels = {}; // Pheromone levels on edges
         this.initializePheromoneLevels();
+        // this.antsMap = antsMap
+        this.currentIteration = 0
+        this.endLoop = 0;
     }
 
     // idPointDijkstra(){
@@ -1444,27 +1471,41 @@ $(async () => {
         // Initialize pheromone levels on edges to a small positive value
         // You would need to implement this based on your specific graph
         // For simplicity, let's assume a simple representation
-        this.ants.forEach(ant => {
-            this.pheromoneLevels[ant.id] = {};
-            this.ants.forEach(otherAnt => {
-                if (ant !== otherAnt) {
-                    this.pheromoneLevels[ant.id][otherAnt.id] = 0.01;
-                }
-            });
+        // console.log(this.ants)
+        $.each(this.ants, function (key, ant) { 
+          // this.pheromoneLevels[ant.idpoint] = [];
+          $.each(this.ants, function (index, otherAnt) { 
+             if (ant !== otherAnt) {
+                  this.pheromoneLevels[ant.idpoint][otherAnt.idpoint] = 0.01;
+              }
+          });
         });
+        // this.ants.forEach(ant => {
+        //     this.pheromoneLevels[ant.idpoint] = {};
+        //     this.ants.forEach(otherAnt => {
+        //         if (ant !== otherAnt) {
+        //             this.pheromoneLevels[ant.idpoint][otherAnt.idpoint] = 0.01;
+        //         }
+        //     });
+        // });
     }
 
     run() {
         // Implementation of ACO algorithm
+        // console.log(this.pheromoneLevels.size)
         for (let i = 0; i < this.iterations; i++) {
           console.log('loop------', i)
           this.bestPathDijkstra = [];
-          this.prevPathAnt = [];
-          var firstAnt = this.ants.find(ant => ant.idpoint === this.startSource.idpoint);
-          var pathAnt = this.moveAnt(firstAnt)
+          this.prevPathAnt[this.currentIteration] = [];
+          this.indexMove = 1;
+          // var firstAnt = this.ants.find(ant => ant.idpoint === this.startSource.idpoint);
+          var firstAnt = this.ants[this.startSource.idpoint];
+          var pathAnt = this.moveAntIteration(firstAnt)
           this.resetVisitAnt()
-          var sorted = this.bestPathDijkstra.slice().sort((a, b) => a - b);
-          console.log(this.prevPathAnt.length, sorted)
+          this.currentIteration += 1;
+          // var sorted = this.bestPathDijkstra.slice().sort((a, b) => a - b);
+          // console.log(this.prevPathAnt.length, sorted)
+          // hasDuplicates(this.prevPathAnt)
           // var tempAnt = []
           //   this.ants.forEach(ant => {
           //       var currentAnt = this.moveAnt(ant);
@@ -1478,68 +1519,186 @@ $(async () => {
           //   });
           //   this.updatePheromoneLevels();
         }
+        console.log(this.prevPathAnt);
+        // this.ants.sort((antA, antB) => {
+        //     const lengthA = antA.prevPath ? antA.prevPath.length : 0;
+        //     const lengthB = antB.prevPath ? antB.prevPath.length : 0;
+
+        //     // Sort in descending order
+        //     return lengthB - lengthA;
+        // });
+        // console.log(this.ants, this.ants.find(ant => ant.idpoint === this.startSource.idpoint))
         // ...
         // Modify and implement the ACO algorithm logic as per your needs
         // ...
     }
 
-    moveAnt(ant) {
-        // Implementation of ant movement logic
-        if(this.resultDijkstra.map(item=>item.idpoint).includes(ant.idpoint)){
-          this.bestPathDijkstra.push(ant.idpoint);
-          const inArray = this.resultDijkstra.map(item=>item.idpoint).some(innerArray =>
-              JSON.stringify(innerArray) === JSON.stringify([...new Set(this.bestPathDijkstra)])
-            );
-          if(inArray){
-            return false;
-          }
+    // moveAnt(ant) {
+    //     // Implementation of ant movement logic
+    //     console.log(ant)
+    //     // if(this.resultDijkstra.map(item=>item.idpoint).includes(ant.idpoint)){
+    //     //   this.bestPathDijkstra.push(ant.idpoint);
+    //     //   const inArray = this.resultDijkstra.map(item=>item.idpoint).some(innerArray =>
+    //     //       JSON.stringify(innerArray) === JSON.stringify([...new Set(this.bestPathDijkstra)])
+    //     //     );
+    //     //   if(inArray){
+    //     //     return false;
+    //     //   }
+    //     // }
+    //     // Modify and implement the ant movement logic as per your needs
+    //     // ...
+    //     const unvisitedAnts = this.ants.filter(otherAnt => !otherAnt.isVisited());
+    //     if (unvisitedAnts.length === 0) {
+    //         return false; // All nodes visited, return
+    //     }
+
+    //     // if(ant.idpoint == this.endSource.idpoint){
+    //     //   return false;
+    //     // }
+
+    //     // Select the next node based on pheromone levels and a heuristic
+    //     const nextNode = this.selectNextNode(ant, unvisitedAnts);
+    //     // console.log('first step ant', ant)
+    //     // console.log('next Node', nextNode)
+    //     // return;
+    //     // console.log('nextNode', nextNode)
+    //     ant.prevPath.push(nextNode)
+    //     this.prevPathAnt.push(ant)
+
+    //     // Move to the next node
+    //     const nextAnt = this.moveAnt(nextNode)
+    //     this.updatePheromoneLevels();
+    //     if(nextAnt == false){
+    //       return false;
+    //     }
+    //     return ant
+    // }
+
+    moveAntIteration(ant){
+      this.indexMove = 0;
+      this.endLoop = 0;
+      // this.selectNextNode3(ant, ant)
+      // outerLoop:
+      // ant.visit();
+      this.prevPathAnt[this.currentIteration][this.indexMove] = [];
+      this.prevPathAnt[this.currentIteration][this.indexMove].push(ant)
+      ant.nextInterchange.forEach((value, key) => {
+        var currentAnt = this.findAnt(key)
+        var nextNode = this.selectNextNode2(currentAnt)
+        if(nextNode == false){
+          return
         }
-        // Modify and implement the ant movement logic as per your needs
-        // ...
-        const unvisitedAnts = this.ants.filter(otherAnt => !otherAnt.isVisited());
-        if (unvisitedAnts.length === 0) {
-            return false; // All nodes visited, return
-        }
+        this.indexMove += 1;
+        this.prevPathAnt[this.currentIteration][this.indexMove] = [];
+      })
 
-        // if(ant.idpoint == this.endSource.idpoint){
-        //   return false;
-        // }
-
-        // Select the next node based on pheromone levels and a heuristic
-        const nextNode = this.selectNextNode(ant, unvisitedAnts);
-        // console.log('ant', ant)
-        // console.log('nextNode', nextNode)
-        ant.visit();
-        this.prevPathAnt.push(ant)
-
-        // Move to the next node
-        const nextAnt = this.moveAnt(nextNode)
-        if(nextAnt == false){
-          return false;
-        }
-
-        return ant
     }
 
-    selectNextNode(ant, unvisitedAnts) {
-        // Implementation of node selection logic
-        // You can use a combination of pheromone levels and a heuristic
-        // to determine the next node the ant should move to
-        // ...
+    // selectNextNode3(firstAnt,nextAnt = null){
+    //   this.prevPathAnt[this.currentIteration][this.indexMove] = [];
+    //   this.prevPathAnt[this.currentIteration][this.indexMove].push(firstAnt)
+    //   if(nextAnt !== null){
+    //     if(nextAnt.visited == false){
+    //     // if(nextAnt.nextInterchange.size == 0 && nextAnt.visited == false){
+    //       nextAnt.visit();
+    //       this.prevPathAnt[this.currentIteration][this.indexMove].push(nextAnt)
+    //       this.selectNextNode3(firstAnt, firstAnt)
 
-        // For this example, let's simply choose the next unvisited node randomly
-        const randomIndex = Math.floor(Math.random() * unvisitedAnts.length);
-        return unvisitedAnts[randomIndex];
+    //       if(nextAnt.idpoint == this.endSource.idpoint){
+    //         return;
+    //       }
+    //     }
+    //   }
+    //   nextAnt.nextInterchange.forEach((value, key) => {
+    //       var currentAnt = this.findAnt(key)
+    //       console.log(currentAnt)
+    //       if(currentAnt.visited == false){
+    //         this.selectNextNode3(firstAnt, currentAnt)
+    //       }
+    //       else{
+    //         this.indexMove += 1;
+    //         this.prevPathAnt[this.currentIteration][this.indexMove] = [];
+    //         this.prevPathAnt[this.currentIteration][this.indexMove].push(nextAnt)
+    //       }
+          
+    //   })
+    // }
+
+    //versi2
+    selectNextNode2(ant){
+      // console.log(this.endLoop, ant.idpoint, this.endSource.idpoint)
+      if(this.endLoop == 1){
+        return;
+      }
+      this.prevPathAnt[this.currentIteration][this.indexMove].push(ant);
+      if(ant.idpoint == this.endSource.idpoint){
+        this.endLoop = 1;
+        return;
+      }
+      ant.visit();
+      // innerLoop:
+      ant.nextInterchange.forEach((value, key) => {
+        var currentAnt = this.findAnt(key)
+        if(currentAnt.visited == false){
+          this.selectNextNode2(currentAnt)
+        }
+      })
     }
+
+    findAnt(idPoint){
+      return this.ants[idPoint];
+    }
+
+    // selectNextNode(ant, unvisitedAnts, randomIndex) {
+    //     // Implementation of node selection logic
+    //     // You can use a combination of pheromone levels and a heuristic
+    //     // to determine the next node the ant should move to
+    //     // ...
+    //     var nextAnt, randomIndex;
+    //     // For this example, let's simply choose the next unvisited node randomly
+        
+    //     if(ant.nextInterchange.size > 0) {         
+    //       const keyArray = [];
+    //       ant.nextInterchange.forEach((value, key) => {
+    //         keyArray.push(key)
+    //       });
+          
+    //       randomIndex = Math.floor(Math.random() * keyArray.length);
+    //       // console.log('random unvisited',randomIndex, unvisitedAnts)
+    //       nextAnt = this.ants.find(ant => ant.idpoint === keyArray[randomIndex])
+    //       if(nextAnt?.visited === true){
+    //         for (let index = 0; index < keyArray.length; index++) {
+    //           nextAnt = this.ants.find(ant => ant.idpoint === keyArray[index])
+    //           if(nextAnt?.visited === false){
+    //             return nextAnt;
+    //           }
+    //         }
+    //         randomIndex = Math.floor(Math.random() * unvisitedAnts.length);
+    //         nextAnt = unvisitedAnts[randomIndex];  
+    //       }  
+    //     }
+    //     else{
+    //       randomIndex = Math.floor(Math.random() * unvisitedAnts.length);
+    //       nextAnt = unvisitedAnts[randomIndex];
+    //     }
+        
+    //     if(nextAnt?.visited === true){
+    //       return this.selectNextNode(ant, unvisitedAnts, randomIndex);
+    //     }
+    //     ant.visited = true
+    //     return nextAnt;
+    // }
 
     updatePheromoneLevels() {
         // Update pheromone levels based on ant paths and evaporation
         // ...
         // Modify and implement the pheromone update logic as per your needs
         // ...
+        let objectKey, theAnts;
         Object.keys(this.pheromoneLevels).forEach(antId => {
             Object.keys(this.pheromoneLevels[antId]).forEach(otherAntId => {
                 this.pheromoneLevels[antId][otherAntId] *= (1 - this.evaporationRate);
+                // console.log('this.pheromoneLevels', this.pheromoneLevels)
             });
         });
 
@@ -1550,13 +1709,19 @@ $(async () => {
                 const fromNode = ant.prevPath[i - 1];
                 const toNode = ant.prevPath[i];
                 this.pheromoneLevels[fromNode.id][toNode.id] += this.depositAmount;
+                // console.log('this.pheromoneLevels', this.pheromoneLevels)
             }
         });
+        // console.log(objectKey, theAnts)
+        return [objectKey, theAnts]
     }
 
     resetVisitAnt(){
-      this.ants.forEach(ant => {
-        ant.visited = false;
+      // this.ants.forEach(ant => {
+      //   ant.visited = false;
+      // });
+      $.each(this.ants, function (key, ant) { 
+         ant.visited = false;
       });
     }
 }

@@ -42,6 +42,9 @@ var malang = {
   lng: 112.65868753195,
 };
 var setZoom = 18;
+var indexTry = 0;
+var indexContent = 0;
+var dataCollect = [];
 class App {
   static map;
   static mapAco;
@@ -81,7 +84,7 @@ class App {
         },
       ],
     });
-    console.log("zoom", setZoom);
+    // console.log("zoom", setZoom);
 
     var infoWindow = new google.maps.InfoWindow();
 
@@ -179,7 +182,7 @@ class App {
           };
           App.map.setCenter(malang);
           App.map.setZoom(setZoom);
-          console.log("zoom", setZoom);
+          // console.log("zoom", setZoom);
         },
         function () {
           App.handleLocationError(true, infoWindow, App.map.getCenter());
@@ -204,12 +207,12 @@ class App {
     // };
     App.map.setCenter(malang);
     App.map.setZoom(setZoom);
-    console.log("zoom", setZoom);
+    // console.log("zoom", setZoom);
   }
 
   static getLines() {
-    console.log("start get lines");
-    console.log("Get All interchanges and make Graph List Interchanges");
+    // console.log("start get lines");
+    // console.log("Get All interchanges and make Graph List Interchanges");
     Core.instance()
       .ajax()
       .get("m/x/mta/lineApi/getInterchanges")
@@ -221,7 +224,7 @@ class App {
         });
       });
 
-    console.log("Get all Lines (mikrolet)");
+    // console.log("Get all Lines (mikrolet)");
     Core.instance()
       .ajax()
       .get("m/x/mta/lineApi/getLines")
@@ -229,7 +232,7 @@ class App {
         (lines) => {
           let linePromises = [];
           let idlines = [];
-          console.log("its lines :", lines);
+          // console.log("its lines :", lines);
           lines.forEach((line) => {
             // console.log('each line',line);
             //kenapa kok ada yang punya path sama point ?
@@ -247,8 +250,8 @@ class App {
           });
           Promise.all(linePromises).then(
             (linepoints) => {
-              console.log("linepoints", linepoints);
-              console.log("idlines", idlines);
+              // console.log("linepoints", linepoints);
+              // console.log("idlines", idlines);
               linepoints.forEach((points) => {
                 // console.log('points', points)
                 /**bisa di comment */
@@ -1019,9 +1022,9 @@ class Dijkstra {
       cost: 0,
       distance: 0,
     };
-    console.log("source", source);
+    // console.log("source", source);
     Dijkstra.unvisited.add(source);
-    console.log("unvisited", Dijkstra.unvisited.size);
+    // console.log("unvisited", Dijkstra.unvisited.size);
     // console.log("pathPoints", Graph.pathPoints);
     while (Dijkstra.unvisited.size > 0) {
       let current = Dijkstra.getMinimumCostPoint(Dijkstra.unvisited);
@@ -1117,11 +1120,12 @@ $(async () => {
   App.getLines();
   var waktuSelesai = performance.now();
   var waktu = waktuSelesai - waktuMulai
-  console.log('waktu',waktu)
-  let dataCollect = [];
+  // console.log('waktu',waktu)
+  dataCollect[indexContent] = [];
   $("#mta-nav .btn-dijkstra").on("click", (e) => {
-    console.log("start bro");
+    // console.log("start bro");
     var waktuMulai = performance.now();
+    var startMemoryUsage = performance.memory.usedJSHeapSize;
 
     if (App.startMarker == null || App.endMarker == null) {
       new CoreInfo(
@@ -1172,8 +1176,8 @@ $(async () => {
     //     lng: App.endMarker.position.lng(),
     //   },
     // ]);
-    console.log("S:", source);
-    console.log("D:", destination);
+    // console.log("S:", source);
+    // console.log("D:", destination);
     // var sourceAco = source
 
     Dijkstra.getCheapestPath(source);
@@ -1181,20 +1185,20 @@ $(async () => {
     //   "Graph.pathPoints.get(destination.idpoint)",
     //   Graph.pathPoints.get(destination.idpoint)
     // );
-    console.log(
-      "graph path points cheapetstPath ",
-      Graph.pathPoints.get(destination.idpoint).cheapestPath
-    );
+    // console.log(
+    //   "graph path points cheapetstPath ",
+    //   Graph.pathPoints.get(destination.idpoint).cheapestPath
+    // );
     let steps = App.buildNavigationSteps(
       destination,
       Graph.pathPoints.get(destination.idpoint).cheapestPath
     );
-    console.log("steps:", steps);
+    // console.log("steps:", steps);
     var stepsDistance = 0;
     $.each(steps, function (index, value) { 
        stepsDistance += Graph.distance(value.from, value.to)
     });
-    console.log('stepDistance', stepsDistance)
+    // console.log('stepDistance', stepsDistance)
     /** jangan lupa di uncomment */
     // remove source and destination points from Graph
     // if it is not a point in an interchange.
@@ -1209,16 +1213,16 @@ $(async () => {
     // App.displayNavigationPath(steps);
 
     var waktuSelesai = performance.now();
+    var endMemoryUsage = performance.memory.usedJSHeapSize;
     var lamaWaktu = waktuSelesai - waktuMulai;
-    var penggunaanMemori = performance.memory.usedJSHeapSize;
-    var informasiProses = performance.memory;
       // console.log();
     
     /**ACO */
     // Example usage with the provided data and settings
-    console.log("start ACO");
+    // console.log("start ACO");
     
     var waktuMulaiAco = performance.now();
+    var startMemoryUsageAco = performance.memory.usedJSHeapSize;
     // console.log('Graph.pathPoints', Graph.pathPoints)
     // return console.log(Graph.pathPoints.get(source.idpoint))
     /**
@@ -1240,8 +1244,8 @@ $(async () => {
       antsMap[data.idpoint] = ant;
       return ant;
     });
-    console.log(ants)
-    console.log(antsMap)
+    // console.log(ants)
+    // console.log(antsMap)
     const startLat = App.startMarker.position.lat()
     const startLong = App.startMarker.position.lng()
     const endLat = App.endMarker.position.lat()
@@ -1270,42 +1274,41 @@ $(async () => {
 
     const bestPath = antColony.run();
 
-    // var waktuSelesaiAco = performance.now();
-    // var lamaWaktuAco = waktuSelesaiAco - waktuMulaiAco;
-    // var penggunaanMemoriAco = performance.memory.usedJSHeapSize;
-    // var informasiProsesAco = performance.memory;
+    var waktuSelesaiAco = performance.now();
+    var endMemoryUsageAco = performance.memory.usedJSHeapSize;
+    var lamaWaktuAco = waktuSelesaiAco - waktuMulaiAco;
+  
     // /**end ACO */
-
-    // console.log("Informasi proses:", informasiProses);
-    // console.log("Penggunaan memori: " + penggunaanMemori + " bytes");
-    // console.log("Lama waktu komputasi: " + lamaWaktu + " milidetik");
-
-    // console.log("Best Path ACO:", bestPath);
-    // console.log("Informasi proses ACO:", informasiProsesAco);
-    // console.log("Penggunaan memori ACO: " + penggunaanMemoriAco + " bytes");
-    // console.log("Lama waktu komputasi ACO: " + lamaWaktuAco + " milidetik");
-    // console.log('arr_destination',antColony.arrDataDestinations);
-    // console.log('arr_destination_sort distance',antColony.arrDataDestinations.sort((a,b) => a.distance - b.distance));
-
-    // console.log(bestPath, bestPath[0][0])
-    // dataCollect.push({
-    //   Dijkstra: {
-    //     jumlahTitik : steps.length,
-    //     jarak: stepsDistance,
-    //     waktuKomputasi: waktuSelesai,
-    //     memori: penggunaanMemori,
-    //     jarakTanpaTitik: Graph.distance(bestPath[0][0],bestPath[0][bestPath[0].length-1]),
-    //     detail: steps,
-    //   },
-    //   ACO:{
-    //     jumlahTitik: bestPath[0].length,
-    //     jarak: bestPath[1],
-    //     waktuKomputasi: waktuSelesaiAco,
-    //     memori: penggunaanMemoriAco,
-    //     jarakTanpaTitik: Graph.distance(bestPath[0][0],bestPath[0][bestPath[0].length-1]),
-    //     detail: bestPath,
-    //   }
-    // })
+    dataCollect[indexContent].push({
+      Dijkstra: {
+        jumlahTitik : steps.length,
+        jarak: stepsDistance,
+        waktuKomputasi: lamaWaktu,
+        memoryStart: startMemoryUsage,
+        memoryEnd: endMemoryUsage,
+        memoryConsume: endMemoryUsage - startMemoryUsage,
+        // usedJSHeapSize: endMemoryUsage.usedJSHeapSize - startMemoryUsage.usedJSHeapSize,
+        // totalJSHeapSize: endMemoryUsage.totalJSHeapSize - startMemoryUsage.totalJSHeapSize,
+        // jsHeapSizeLimit: endMemoryUsage.jsHeapSizeLimit - startMemoryUsage.jsHeapSizeLimit,
+        // usedJSHeapSize: endMemoryUsage.usedJSHeapSize - startMemoryUsage.usedJSHeapSize,
+        // jarakTanpaTitik: Graph.distance(bestPath[0][0],bestPath[0][bestPath[0].length-1]),
+        // detail: steps,
+      },
+      ACO:{
+        jumlahTitik: steps.length,
+        jarak: stepsDistance,
+        waktuKomputasi: lamaWaktuAco,
+        memoryStart: startMemoryUsageAco,
+        memoryEnd: endMemoryUsageAco,
+        memoryConsume: endMemoryUsageAco - startMemoryUsageAco,
+        // usedJSHeapSize: endMemoryUsageAco.usedJSHeapSize - startMemoryUsageAco.usedJSHeapSize,
+        // totalJSHeapSize: endMemoryUsageAco.totalJSHeapSize - startMemoryUsageAco.totalJSHeapSize,
+        // jsHeapSizeLimit: endMemoryUsageAco.jsHeapSizeLimit - startMemoryUsageAco.jsHeapSizeLimit,
+        // usedJSHeapSize: endMemoryUsageAco.usedJSHeapSize - startMemoryUsageAco.usedJSHeapSize,
+        // jarakTanpaTitik: Graph.distance(bestPath[0][0],bestPath[0][bestPath[0].length-1]),
+        // detail: steps,
+      }
+    })
 
     console.log(dataCollect)
     // let stepsAco = App.buildNavigationSteps(
@@ -1329,35 +1332,156 @@ $(async () => {
       {
         
           start:{
-            lat: -7.991416543162467,
-            lng: 112.6282960930214
+            lat:-7.96089970678129, //percobaan1
+            lng: 112.65063788741827 //percobaan1
+
+            // -7.923781372946134, 112.59687267243862 //#4
+            // -7.924002534850689, 112.59818628430367 //#5
+            // -7.933064093377771, 112.60232325643301 //#6
+            // -7.924927030174133, 112.59815711528063 //#7
+            // -8.025119469371067, 112.63855822384357 //#8
+            // -8.02362051932453, 112.63657841831446 //#9
+            // -7.946479402541825, 112.64345694333315 //#10
+            
+            // lat: -7.991416543162467,
+            // lng: 112.6282960930214
             // lat: -7.9414208198425, 
             // lng: 112.64131486416
             // lat: getRandomLat(),
             // lng: getRandomLong()
           },
           end:{
-            lat: -7.9759322351900614,
-            lng: 112.64599230261102
+            lat:-7.971795618780245, //percobaan1
+            lng: 112.60223139077425 //percobaan1
+            // -7,939320862129, 112,62403171509504 //#3
+            // -7.933345686545384, 112.65913411974907 //#4
+            // -7.925024327872972, 112.6005120947957 //#5
+            // -7.933064093377771, 112.60232325643301 //#6
+            // -8.025599198616797, 112.63960495591164 //#7
+            // -7.933705315275011, 112.933705315275011 //#8
+            // -7.924376118879024, 112.5972481817007 //#9
+            // -7.981845234119922, 112.6245017722249 //#10
+
+
+
+            // lat: -7.9759322351900614,
+            // lng: 112.64599230261102
             // lat: -7.9441038621459,
             // lng: 112.6199503988
             // lat: getRandomLat(),
             // lng: getRandomLong()
           },
       },
+      {
+        start:{
+          lat:-7.967760031247459,
+          lng: 112.63250514864922 //#2
+        },
+        end:{
+          lat:-7.957399273351381,
+          lng: 112.64377009123564 //#2
+        }
+      },
+      {
+        start:{
+          lat: -7.953136088907187,  //#3
+          lng: 112.61433485895395 //#3
+        },
+        end:{
+          lat:-7.939320862129,
+          lng: 112.62403171509504 //#3
+        }
+      },
+      {
+        start:{
+          lat:-7.923781372946134,
+          lng: 112.59687267243862 //#4
+        },
+        end:{
+          lat:-7.933345686545384,
+          lng: 112.65913411974907 //#4
+        }
+      },
+      {
+        start:{
+          lat:-7.924002534850689,
+          lng: 112.59818628430367 //#5
+        },
+        end:{
+          lat:-7.925024327872972,
+          lng: 112.6005120947957 //#5
+        }
+      },
+      {
+        start:{
+          lat:-7.933064093377771,
+          lng: 112.60232325643301 //#6
+        },
+        end:{
+          lat:-7.957399273351381,
+          lng: 112.60232325643301 //#6
+        }
+      },
+      {
+        start:{
+          lat:-7.924927030174133,
+          lng: 112.59815711528063 //#7
+        },
+        end:{
+          lat:-8.025599198616797,
+          lng: 112.63960495591164 //#7
+        }
+      },
+      {
+        start:{
+          lat:-8.025119469371067,
+          lng: 112.63855822384357 //#8
+        },
+        end:{
+          lat:-7.933705315275011,
+          lng: 112.933705315275011 //#8
+        }
+      },
+      {
+        start:{
+          lat:-8.02362051932453,
+          lng: 112.63657841831446 //#9
+        },
+        end:{
+          lat:-7.924376118879024,
+          lng: 112.5972481817007 //#9
+        }
+      },
+      {
+        start:{
+          lat:-7.946479402541825,
+          lng: 112.64345694333315 //#10
+        },
+        end:{
+          lat:-7.981845234119922,
+          lng: 112.6245017722249 //#10
+        }
+      }
     ];
 
-    App.startMarker = new google.maps.Marker({
-          map: App.map,
-          position: dataLatLong[0].start,
-          draggable: true,
-        });
-    App.endMarker = new google.maps.Marker({
-              map: App.map,
-              position: dataLatLong[0].end,
-              draggable: true,
-            });
-    $('.btn-dijkstra').trigger('click')
+    $.each(dataLatLong, function (index, value) {  
+      App.startMarker = new google.maps.Marker({
+            map: App.map,
+            position: value.start,
+            draggable: true,
+          });
+      App.endMarker = new google.maps.Marker({
+                map: App.map,
+                position: value.end,
+                draggable: true,
+              });
+      for (let index = 0; index < 30; index++) {
+        $('.btn-dijkstra').trigger('click')
+        // indexTry++;
+      }
+      indexContent++;
+      dataCollect[indexContent] = [];
+    });
     // console.log(dataLatLong, App.startMarker, App.endMarker);
   })
 
@@ -1375,7 +1499,7 @@ $(async () => {
   const valueSet = new Set();
   for (const value of array) {
     if (valueSet.has(value)) {
-      console.log('duplicate', value)
+      // console.log('duplicate', value)
       // return true; // Duplicate found
     }
     valueSet.add(value);
@@ -1494,7 +1618,7 @@ $(async () => {
         // Implementation of ACO algorithm
         // console.log(this.pheromoneLevels.size)
         for (let i = 0; i < this.iterations; i++) {
-          console.log('loop------', i)
+          // console.log('loop------', i)
           this.bestPathDijkstra = [];
           this.prevPathAnt[this.currentIteration] = [];
           this.indexMove = 1;
@@ -1519,7 +1643,8 @@ $(async () => {
           //   });
           //   this.updatePheromoneLevels();
         }
-        console.log(this.prevPathAnt);
+        // this.updatePheromoneLevels();
+        // console.log(this.prevPathAnt);
         // this.ants.sort((antA, antB) => {
         //     const lengthA = antA.prevPath ? antA.prevPath.length : 0;
         //     const lengthB = antB.prevPath ? antB.prevPath.length : 0;
@@ -1703,6 +1828,9 @@ $(async () => {
         });
 
         // Deposit pheromone on edges of ants' paths
+        // $.each(this.prevPathAnt, function (indexInArray, valueOfElement) { 
+           
+        // });
         this.ants.forEach(ant => {
             // For simplicity, let's assume ant.path is an array of visited nodes
             for (let i = 1; i < ant.prevPath.length; i++) {

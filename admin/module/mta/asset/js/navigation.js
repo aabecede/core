@@ -45,6 +45,8 @@ var setZoom = 18;
 var indexTry = 0;
 var indexContent = 0;
 var dataCollect = [];
+var memoryCollect = [];
+var memoryCollectAco = [];
 class App {
   static map;
   static mapAco;
@@ -1016,6 +1018,7 @@ class Dijkstra {
   static unvisited = new Set();
 
   static getCheapestPath(source) {
+    memoryCollect[indexContent].push(performance.memory.usedJSHeapSize);
     Dijkstra.visited = new Set();
     Dijkstra.unvisited = new Set();
     source.cost = {
@@ -1028,6 +1031,7 @@ class Dijkstra {
     // console.log("pathPoints", Graph.pathPoints);
     while (Dijkstra.unvisited.size > 0) {
       let current = Dijkstra.getMinimumCostPoint(Dijkstra.unvisited);
+      memoryCollect[indexContent].push(performance.memory.usedJSHeapSize);
       // console.log("current", current);
       current.destinations.forEach((dest, key) => {
         let nextPoint = Graph.pathPoints.get(key);
@@ -1042,10 +1046,13 @@ class Dijkstra {
           // console.log("calculate min price");
           Dijkstra.calculateMinPrice(nextPoint, dest, current);
           Dijkstra.unvisited.add(nextPoint);
+          memoryCollect[indexContent].push(performance.memory.usedJSHeapSize);
         }
       });
       Dijkstra.unvisited.delete(current);
+      memoryCollect[indexContent].push(performance.memory.usedJSHeapSize);
       Dijkstra.visited.add(current);
+      memoryCollect[indexContent].push(performance.memory.usedJSHeapSize);
     }
   }
 
@@ -1122,6 +1129,8 @@ $(async () => {
   var waktu = waktuSelesai - waktuMulai
   // console.log('waktu',waktu)
   dataCollect[indexContent] = [];
+  memoryCollect[indexContent] = []
+  memoryCollectAco[indexContent] = []
   $("#mta-nav .btn-dijkstra").on("click", (e) => {
     // console.log("start bro");
     var waktuMulai = performance.now();
@@ -1181,23 +1190,25 @@ $(async () => {
     // var sourceAco = source
 
     Dijkstra.getCheapestPath(source);
+    var endMemoryUsage = performance.memory.usedJSHeapSize;
     // console.log(
     //   "Graph.pathPoints.get(destination.idpoint)",
     //   Graph.pathPoints.get(destination.idpoint)
     // );
-    // console.log(
-    //   "graph path points cheapetstPath ",
-    //   Graph.pathPoints.get(destination.idpoint).cheapestPath
-    // );
+    console.log(
+      "graph path points cheapetstPath ",
+      Graph.pathPoints.get(destination.idpoint).cheapestPath
+    );
     let steps = App.buildNavigationSteps(
       destination,
       Graph.pathPoints.get(destination.idpoint).cheapestPath
     );
-    // console.log("steps:", steps);
+    console.log("steps:", steps);
     var stepsDistance = 0;
     $.each(steps, function (index, value) { 
        stepsDistance += Graph.distance(value.from, value.to)
     });
+    
     // console.log('stepDistance', stepsDistance)
     /** jangan lupa di uncomment */
     // remove source and destination points from Graph
@@ -1213,9 +1224,10 @@ $(async () => {
     // App.displayNavigationPath(steps);
 
     var waktuSelesai = performance.now();
-    var endMemoryUsage = performance.memory.usedJSHeapSize;
+    
     var lamaWaktu = waktuSelesai - waktuMulai;
-      // console.log();
+    memoryCollect[indexContent].push(performance.memory.usedJSHeapSize);
+    var rateMemory = memoryCollect[indexContent].reduce((a, b) => a + b, 0) / memoryCollect[indexContent].length
     
     /**ACO */
     // Example usage with the provided data and settings
@@ -1276,8 +1288,13 @@ $(async () => {
 
     var waktuSelesaiAco = performance.now();
     var endMemoryUsageAco = performance.memory.usedJSHeapSize;
+    var rateMemoryAco = memoryCollectAco[indexContent].reduce((a, b) => a + b, 0) / memoryCollectAco[indexContent].length
     var lamaWaktuAco = waktuSelesaiAco - waktuMulaiAco;
-  
+    try {
+        gc();
+      } catch(e) {
+        
+      }
     // /**end ACO */
     dataCollect[indexContent].push({
       Dijkstra: {
@@ -1286,7 +1303,9 @@ $(async () => {
         waktuKomputasi: lamaWaktu,
         memoryStart: startMemoryUsage,
         memoryEnd: endMemoryUsage,
-        memoryConsume: endMemoryUsage - startMemoryUsage,
+        rateMemory: rateMemory,
+        cost: '',
+        listLIne: []
         // usedJSHeapSize: endMemoryUsage.usedJSHeapSize - startMemoryUsage.usedJSHeapSize,
         // totalJSHeapSize: endMemoryUsage.totalJSHeapSize - startMemoryUsage.totalJSHeapSize,
         // jsHeapSizeLimit: endMemoryUsage.jsHeapSizeLimit - startMemoryUsage.jsHeapSizeLimit,
@@ -1300,7 +1319,7 @@ $(async () => {
         waktuKomputasi: lamaWaktuAco,
         memoryStart: startMemoryUsageAco,
         memoryEnd: endMemoryUsageAco,
-        memoryConsume: endMemoryUsageAco - startMemoryUsageAco,
+        rateMemory: rateMemoryAco,
         // usedJSHeapSize: endMemoryUsageAco.usedJSHeapSize - startMemoryUsageAco.usedJSHeapSize,
         // totalJSHeapSize: endMemoryUsageAco.totalJSHeapSize - startMemoryUsageAco.totalJSHeapSize,
         // jsHeapSizeLimit: endMemoryUsageAco.jsHeapSizeLimit - startMemoryUsageAco.jsHeapSizeLimit,
@@ -1481,6 +1500,8 @@ $(async () => {
       }
       indexContent++;
       dataCollect[indexContent] = [];
+      memoryCollect[indexContent] = [];
+      memoryCollectAco[indexContent] = [];
     });
     // console.log(dataLatLong, App.startMarker, App.endMarker);
   })
@@ -1617,6 +1638,7 @@ $(async () => {
     run() {
         // Implementation of ACO algorithm
         // console.log(this.pheromoneLevels.size)
+        memoryCollectAco[indexContent].push(performance.memory.usedJSHeapSize);
         for (let i = 0; i < this.iterations; i++) {
           // console.log('loop------', i)
           this.bestPathDijkstra = [];
@@ -1700,6 +1722,7 @@ $(async () => {
     // }
 
     moveAntIteration(ant){
+      memoryCollectAco[indexContent].push(performance.memory.usedJSHeapSize);
       this.indexMove = 0;
       this.endLoop = 0;
       // this.selectNextNode3(ant, ant)
@@ -1709,12 +1732,16 @@ $(async () => {
       this.prevPathAnt[this.currentIteration][this.indexMove].push(ant)
       ant.nextInterchange.forEach((value, key) => {
         var currentAnt = this.findAnt(key)
+        memoryCollectAco[indexContent].push(performance.memory.usedJSHeapSize);
         var nextNode = this.selectNextNode2(currentAnt)
+        memoryCollectAco[indexContent].push(performance.memory.usedJSHeapSize);
         if(nextNode == false){
           return
         }
         this.indexMove += 1;
+        memoryCollectAco[indexContent].push(performance.memory.usedJSHeapSize);
         this.prevPathAnt[this.currentIteration][this.indexMove] = [];
+        memoryCollectAco[indexContent].push(performance.memory.usedJSHeapSize);
       })
 
     }
@@ -1751,19 +1778,24 @@ $(async () => {
 
     //versi2
     selectNextNode2(ant){
+      memoryCollectAco[indexContent].push(performance.memory.usedJSHeapSize);
       // console.log(this.endLoop, ant.idpoint, this.endSource.idpoint)
       if(this.endLoop == 1){
         return;
       }
       this.prevPathAnt[this.currentIteration][this.indexMove].push(ant);
+      memoryCollectAco[indexContent].push(performance.memory.usedJSHeapSize);
       if(ant.idpoint == this.endSource.idpoint){
         this.endLoop = 1;
+        memoryCollectAco[indexContent].push(performance.memory.usedJSHeapSize);
         return;
       }
       ant.visit();
+      memoryCollectAco[indexContent].push(performance.memory.usedJSHeapSize);
       // innerLoop:
       ant.nextInterchange.forEach((value, key) => {
         var currentAnt = this.findAnt(key)
+        memoryCollectAco[indexContent].push(performance.memory.usedJSHeapSize);
         if(currentAnt.visited == false){
           this.selectNextNode2(currentAnt)
         }

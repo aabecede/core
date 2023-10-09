@@ -47,6 +47,7 @@ var indexContent = 0;
 var dataCollect = [];
 var memoryCollect = [];
 var memoryCollectAco = [];
+var allIndex = 1;
 class App {
   static map;
   static mapAco;
@@ -1108,6 +1109,7 @@ $(async () => {
   //   strokeWeight: 3,
   //   strokeColor: line.linecolor
   // }
+  const stopCapturing = captureConsoleLog();
   var waktuMulai = performance.now();
   App.interchangeIcon = {
     path: "M-6,0a6,6 0 1,0 12,0a6,6 0 1,0 -12,0",
@@ -1195,19 +1197,41 @@ $(async () => {
     //   "Graph.pathPoints.get(destination.idpoint)",
     //   Graph.pathPoints.get(destination.idpoint)
     // );
-    console.log(
-      "graph path points cheapetstPath ",
-      Graph.pathPoints.get(destination.idpoint).cheapestPath
-    );
+    // console.log(
+    //   "graph path points cheapetstPath ",
+    //   Graph.pathPoints.get(destination.idpoint).cheapestPath
+    // );
     let steps = App.buildNavigationSteps(
       destination,
       Graph.pathPoints.get(destination.idpoint).cheapestPath
     );
-    console.log("steps:", steps);
+    // console.log("steps:", steps);
     var stepsDistance = 0;
+    var costCurrent = 0;
+    var listLine = [];
     $.each(steps, function (index, value) { 
+      // console.log('valuess',value)
+      if(value?.type == 'line'){
+        costCurrent++;
+        Graph.lines.forEach(line => {
+          if(value?.idline == line.idline){
+              listLine.push(line?.name)
+          }
+        });
+        // $.each(Graph.lines, function (keys, line) { 
+        //    if(value?.idline == line.idline){
+        //      listLine.push(line?.name)
+        //    }
+        // });
+      }
        stepsDistance += Graph.distance(value.from, value.to)
     });
+    if(costCurrent == 0){
+      costCurrent = 4000;
+    }
+    else{
+      costCurrent = costCurrent * 4000
+    }
     
     // console.log('stepDistance', stepsDistance)
     /** jangan lupa di uncomment */
@@ -1304,8 +1328,16 @@ $(async () => {
         memoryStart: startMemoryUsage,
         memoryEnd: endMemoryUsage,
         rateMemory: rateMemory,
-        cost: '',
-        listLIne: []
+        cost: costCurrent,
+        listLine: listLine,
+        source: {
+          lat: source?.lat,
+          long: source?.lng,
+        },
+        destination: {
+          lat: destination.lat,
+          long: destination.lng,
+        },
         // usedJSHeapSize: endMemoryUsage.usedJSHeapSize - startMemoryUsage.usedJSHeapSize,
         // totalJSHeapSize: endMemoryUsage.totalJSHeapSize - startMemoryUsage.totalJSHeapSize,
         // jsHeapSizeLimit: endMemoryUsage.jsHeapSizeLimit - startMemoryUsage.jsHeapSizeLimit,
@@ -1313,23 +1345,29 @@ $(async () => {
         // jarakTanpaTitik: Graph.distance(bestPath[0][0],bestPath[0][bestPath[0].length-1]),
         // detail: steps,
       },
-      ACO:{
-        jumlahTitik: steps.length,
-        jarak: stepsDistance,
-        waktuKomputasi: lamaWaktuAco,
-        memoryStart: startMemoryUsageAco,
-        memoryEnd: endMemoryUsageAco,
-        rateMemory: rateMemoryAco,
+      // ACO:{
+      //   jumlahTitik: steps.length,
+      //   jarak: stepsDistance,
+      //   waktuKomputasi: lamaWaktuAco,
+      //   memoryStart: startMemoryUsageAco,
+      //   memoryEnd: endMemoryUsageAco,
+      //   rateMemory: rateMemoryAco,
         // usedJSHeapSize: endMemoryUsageAco.usedJSHeapSize - startMemoryUsageAco.usedJSHeapSize,
         // totalJSHeapSize: endMemoryUsageAco.totalJSHeapSize - startMemoryUsageAco.totalJSHeapSize,
         // jsHeapSizeLimit: endMemoryUsageAco.jsHeapSizeLimit - startMemoryUsageAco.jsHeapSizeLimit,
         // usedJSHeapSize: endMemoryUsageAco.usedJSHeapSize - startMemoryUsageAco.usedJSHeapSize,
         // jarakTanpaTitik: Graph.distance(bestPath[0][0],bestPath[0][bestPath[0].length-1]),
         // detail: steps,
-      }
+      // }
     })
 
-    console.log(dataCollect)
+    // console.log(dataCollect)
+    // console.log(allIndex)
+    if(allIndex == 300){
+      console.log(dataCollect)
+      stopCapturing();
+    }
+
     // let stepsAco = App.buildNavigationSteps(
     //   destination,
     //   Graph.pathPoints.get(destination.idpoint).cheapestPath
@@ -1496,6 +1534,7 @@ $(async () => {
               });
       for (let index = 0; index < 30; index++) {
         $('.btn-dijkstra').trigger('click')
+        allIndex++;
         // indexTry++;
       }
       indexContent++;
@@ -1885,5 +1924,42 @@ $(async () => {
       });
     }
 }
+
+//ee
+function captureConsoleLog() {
+  const logs = [];
+  const originalLog = console.log;
+
+  // Override console.log
+  console.log = function (message) {
+    // Call the original console.log
+    originalLog.apply(console, arguments);
+    
+    // Capture the log message
+    logs.push(message);
+  };
+
+  // Return a function to stop capturing and save to a file
+  return function () {
+    console.log = originalLog; // Restore the original console.log
+    saveLogsToFile(logs); // Save captured logs to a file
+  };
+}
+
+// Function to save logs to a text file
+function saveLogsToFile(logs) {
+  const logText = logs.join('\n');
+  const blob = new Blob([logText], { type: 'text/plain' });
+  const url = window.URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.style.display = 'none';
+  a.href = url;
+  a.download = 'console-logs.txt';
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  window.URL.revokeObjectURL(url);
+}
+
 
 });

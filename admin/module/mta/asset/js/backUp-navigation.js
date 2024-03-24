@@ -42,13 +42,6 @@ var malang = {
   lng: 112.65868753195,
 };
 var setZoom = 18;
-var indexTry = 0;
-var indexContent = 0;
-var dataCollect = [];
-var memoryCollect = [];
-var pointCollectDj = []
-var memoryCollectAco = [];
-var pointCollectAco = []
 class App {
   static map;
   static mapAco;
@@ -62,7 +55,6 @@ class App {
   static stopIcon;
   static startMarker = null;
   static endMarker = null;
-  static allPointsLine = []
 
   static async initMap() {
     const { Map } = await google.maps.importLibrary("maps");
@@ -88,7 +80,7 @@ class App {
         },
       ],
     });
-    // console.log("zoom", setZoom);
+    console.log("zoom", setZoom);
 
     var infoWindow = new google.maps.InfoWindow();
 
@@ -186,7 +178,7 @@ class App {
           };
           App.map.setCenter(malang);
           App.map.setZoom(setZoom);
-          // console.log("zoom", setZoom);
+          console.log("zoom", setZoom);
         },
         function () {
           App.handleLocationError(true, infoWindow, App.map.getCenter());
@@ -211,12 +203,12 @@ class App {
     // };
     App.map.setCenter(malang);
     App.map.setZoom(setZoom);
-    // console.log("zoom", setZoom);
+    console.log("zoom", setZoom);
   }
 
   static getLines() {
-    // console.log("start get lines");
-    // console.log("Get All interchanges and make Graph List Interchanges");
+    console.log("start get lines");
+    console.log("Get All interchanges and make Graph List Interchanges");
     Core.instance()
       .ajax()
       .get("m/x/mta/lineApi/getInterchanges")
@@ -228,7 +220,7 @@ class App {
         });
       });
 
-    // console.log("Get all Lines (mikrolet)");
+    console.log("Get all Lines (mikrolet)");
     Core.instance()
       .ajax()
       .get("m/x/mta/lineApi/getLines")
@@ -236,7 +228,7 @@ class App {
         (lines) => {
           let linePromises = [];
           let idlines = [];
-          // console.log("its lines :", lines);
+          console.log("its lines :", lines);
           lines.forEach((line) => {
             // console.log('each line',line);
             //kenapa kok ada yang punya path sama point ?
@@ -254,8 +246,8 @@ class App {
           });
           Promise.all(linePromises).then(
             (linepoints) => {
-              // console.log("linepoints", linepoints);
-              // console.log("idlines", idlines);
+              console.log("linepoints", linepoints);
+              console.log("idlines", idlines);
               linepoints.forEach((points) => {
                 // console.log('points', points)
                 /**bisa di comment */
@@ -265,7 +257,6 @@ class App {
                   linecolor: points[0].linecolor,
                   points: points,
                 };
-                this.allPointsLine.push(points)
                 App.drawLineMap(currentDataline);
                 /**end bisa di comment */
                 Graph.buildLine(idlines.shift(), points);
@@ -1020,21 +1011,18 @@ class Dijkstra {
   static unvisited = new Set();
 
   static getCheapestPath(source) {
-    memoryCollect[indexContent].push(performance.memory.usedJSHeapSize);
     Dijkstra.visited = new Set();
     Dijkstra.unvisited = new Set();
     source.cost = {
       cost: 0,
       distance: 0,
     };
-    // console.log("source", source);
+    console.log("source", source);
     Dijkstra.unvisited.add(source);
-    // console.log("unvisited", Dijkstra.unvisited.size);
+    console.log("unvisited", Dijkstra.unvisited.size);
     // console.log("pathPoints", Graph.pathPoints);
     while (Dijkstra.unvisited.size > 0) {
       let current = Dijkstra.getMinimumCostPoint(Dijkstra.unvisited);
-      memoryCollect[indexContent].push(performance.memory.usedJSHeapSize);
-      pointCollectDj[indexContent] += 1;
       // console.log("current", current);
       current.destinations.forEach((dest, key) => {
         let nextPoint = Graph.pathPoints.get(key);
@@ -1046,17 +1034,13 @@ class Dijkstra {
           console.log(key, current, dest, Graph.pathPoints);
         }
         if (!Dijkstra.visited.has(nextPoint)) {
-          pointCollectDj[indexContent] += 1
           // console.log("calculate min price");
           Dijkstra.calculateMinPrice(nextPoint, dest, current);
           Dijkstra.unvisited.add(nextPoint);
-          memoryCollect[indexContent].push(performance.memory.usedJSHeapSize);
         }
       });
       Dijkstra.unvisited.delete(current);
-      memoryCollect[indexContent].push(performance.memory.usedJSHeapSize);
       Dijkstra.visited.add(current);
-      memoryCollect[indexContent].push(performance.memory.usedJSHeapSize);
     }
   }
 
@@ -1129,24 +1113,13 @@ $(async () => {
     scale: 3,
   };
   App.getLines();
-  // var waktuSelesai = performance.now();
-  // var waktu = waktuSelesai - waktuMulai
-  // console.log('waktu',waktu)
-  dataCollect[indexContent] = [];
-  memoryCollect[indexContent] = []
-  memoryCollectAco[indexContent] = []
+  var waktuSelesai = performance.now();
+  var waktu = waktuSelesai - waktuMulai
+  console.log('waktu',waktu)
+  let dataCollect = [];
   $("#mta-nav .btn-dijkstra").on("click", (e) => {
-    try {
-        gc();
-      } catch(e) {
-        
-      }
-
-    pointCollectDj[indexContent] = 0;
-    pointCollectAco[indexContent] = 0;
-    // console.log("start bro");
+    console.log("start bro");
     var waktuMulai = performance.now();
-    var startMemoryUsage = performance.memory.usedJSHeapSize;
 
     if (App.startMarker == null || App.endMarker == null) {
       new CoreInfo(
@@ -1197,8 +1170,8 @@ $(async () => {
     //     lng: App.endMarker.position.lng(),
     //   },
     // ]);
-    // console.log("S:", source);
-    // console.log("D:", destination);
+    console.log("S:", source);
+    console.log("D:", destination);
     // var sourceAco = source
 
     Dijkstra.getCheapestPath(source);
@@ -1206,10 +1179,10 @@ $(async () => {
     //   "Graph.pathPoints.get(destination.idpoint)",
     //   Graph.pathPoints.get(destination.idpoint)
     // );
-    // console.log(
-    //   "graph path points cheapetstPath ",
-    //   Graph.pathPoints.get(destination.idpoint).cheapestPath
-    // );
+    console.log(
+      "graph path points cheapetstPath ",
+      Graph.pathPoints.get(destination.idpoint).cheapestPath
+    );
     let steps = App.buildNavigationSteps(
       destination,
       Graph.pathPoints.get(destination.idpoint).cheapestPath
@@ -1219,9 +1192,7 @@ $(async () => {
     $.each(steps, function (index, value) { 
        stepsDistance += Graph.distance(value.from, value.to)
     });
-    
-    // console.log('stepDistance', stepsDistance)
-    /** jangan lupa di uncomment */
+    console.log('stepDistance', stepsDistance)
     // remove source and destination points from Graph
     // if it is not a point in an interchange.
     // delete source.isStop;
@@ -1233,57 +1204,44 @@ $(async () => {
 
     // App.drawNavigationPath(steps);
     // App.displayNavigationPath(steps);
-    var endMemoryUsage = Math.max(...memoryCollect[indexContent]);
+
     var waktuSelesai = performance.now();
-    
     var lamaWaktu = waktuSelesai - waktuMulai;
-    memoryCollect[indexContent].push(endMemoryUsage);
-    var rateMemory = memoryCollect[indexContent].reduce((a, b) => a + b, 0) / memoryCollect[indexContent].length
+    var penggunaanMemori = performance.memory.usedJSHeapSize;
+    var informasiProses = performance.memory;
+      // console.log();
     
     /**ACO */
     // Example usage with the provided data and settings
-    // console.log("start ACO");
+    console.log("start ACO");
     
     var waktuMulaiAco = performance.now();
-    var startMemoryUsageAco = performance.memory.usedJSHeapSize;
     // console.log('Graph.pathPoints', Graph.pathPoints)
-    // return console.log(Graph.pathPoints.get(source.idpoint))
-    /**
-     * combine all path
-     */
-    const combinedArray = [].concat(...App.allPointsLine);
-    const antsMap = {};
-    const ants =  combinedArray.map(data => {
-      const ant = new Ant(
-        data.idpoint,
-        data.idline,
-        data.idinterchange,
-        data.destinations ?? [],
-        data.lat,
-        data.lng,
-        data.stop,
-        data.sequence
-      );
-      antsMap[data.idpoint] = ant;
-      return ant;
-    });
+    
+    const ants =  []
+    ants.push(
+      new Ant(source.idpoint, source.lat, source.lng, source.destinations)
+    )
+    // .forEach(antData => {
+    //      ants.push(new Ant(antData.idpoint, antData.lat, antData.lng, antData.destinations))
+    //   });
     // console.log(ants)
-    // console.log(antsMap)
+      // const ants = antDataArray.map((antData) => new Ant(antData.id, antData.lat, antData.long));
+
     const startLat = App.startMarker.position.lat()
     const startLong = App.startMarker.position.lng()
     const endLat = App.endMarker.position.lat()
     const endLong = App.endMarker.position.lng()
 
     // Settings for the ACO algorithm
-    const iterations = 2;
+    const iterations = 10;
     const evaporationRate = 0.5;
     const depositAmount = 1;
 
     // return console.log(destination.destinations, Graph.pathPoints.get(destination.idpoint))
     const antColony = new AntColony(
-      antsMap,
-      startSource = source,
-      endSource = destination,
+      ants,
+      destination = new Ant(destination.idpoint, destination.lat, destination.lng, destination.destinations),
       startLat,
       startLong,
       endLat,
@@ -1291,50 +1249,44 @@ $(async () => {
       iterations,
       evaporationRate,
       depositAmount,
-      resultDijkstra = Graph.pathPoints.get(destination.idpoint).cheapestPath
-      // antsMap
+      // Graph.pathPoints.get(destination.idpoint).cheapestPath
     );
 
     const bestPath = antColony.run();
-
     var waktuSelesaiAco = performance.now();
-    var endMemoryUsageAco = performance.memory.usedJSHeapSize;
-    var rateMemoryAco = memoryCollectAco[indexContent].reduce((a, b) => a + b, 0) / memoryCollectAco[indexContent].length
     var lamaWaktuAco = waktuSelesaiAco - waktuMulaiAco;
+    var penggunaanMemoriAco = performance.memory.usedJSHeapSize;
+    var informasiProsesAco = performance.memory;
+    /**end ACO */
 
-    // /**end ACO */
-    dataCollect[indexContent].push({
+    console.log("Informasi proses:", informasiProses);
+    console.log("Penggunaan memori: " + penggunaanMemori + " bytes");
+    console.log("Lama waktu komputasi: " + lamaWaktu + " milidetik");
+
+    console.log("Best Path ACO:", bestPath);
+    console.log("Informasi proses ACO:", informasiProsesAco);
+    console.log("Penggunaan memori ACO: " + penggunaanMemoriAco + " bytes");
+    console.log("Lama waktu komputasi ACO: " + lamaWaktuAco + " milidetik");
+    console.log('arr_destination',antColony.arrDataDestinations);
+    // console.log('arr_destination_sort distance',antColony.arrDataDestinations.sort((a,b) => a.distance - b.distance));
+
+    // console.log(bestPath, bestPath[0][0])
+    dataCollect.push({
       Dijkstra: {
         jumlahTitik : steps.length,
-        titikDilalui: pointCollectDj[indexContent],
         jarak: stepsDistance,
-        waktuKomputasi: lamaWaktu,
-        memoryStart: startMemoryUsage,
-        memoryEnd: endMemoryUsage,
-        rateMemory: rateMemory,
-        cost: '',
-        listLIne: []
-        // usedJSHeapSize: endMemoryUsage.usedJSHeapSize - startMemoryUsage.usedJSHeapSize,
-        // totalJSHeapSize: endMemoryUsage.totalJSHeapSize - startMemoryUsage.totalJSHeapSize,
-        // jsHeapSizeLimit: endMemoryUsage.jsHeapSizeLimit - startMemoryUsage.jsHeapSizeLimit,
-        // usedJSHeapSize: endMemoryUsage.usedJSHeapSize - startMemoryUsage.usedJSHeapSize,
-        // jarakTanpaTitik: Graph.distance(bestPath[0][0],bestPath[0][bestPath[0].length-1]),
-        // detail: steps,
+        waktuKomputasi: waktuSelesai,
+        memori: penggunaanMemori,
+        jarakTanpaTitik: Graph.distance(bestPath[0][0],bestPath[0][bestPath[0].length-1]),
+        detail: steps,
       },
       ACO:{
-        jumlahTitik: steps.length,
-        titikDilalui: pointCollectAco[indexContent],
-        jarak: stepsDistance,
-        waktuKomputasi: lamaWaktuAco,
-        memoryStart: startMemoryUsageAco,
-        memoryEnd: endMemoryUsageAco,
-        rateMemory: rateMemoryAco,
-        // usedJSHeapSize: endMemoryUsageAco.usedJSHeapSize - startMemoryUsageAco.usedJSHeapSize,
-        // totalJSHeapSize: endMemoryUsageAco.totalJSHeapSize - startMemoryUsageAco.totalJSHeapSize,
-        // jsHeapSizeLimit: endMemoryUsageAco.jsHeapSizeLimit - startMemoryUsageAco.jsHeapSizeLimit,
-        // usedJSHeapSize: endMemoryUsageAco.usedJSHeapSize - startMemoryUsageAco.usedJSHeapSize,
-        // jarakTanpaTitik: Graph.distance(bestPath[0][0],bestPath[0][bestPath[0].length-1]),
-        // detail: steps,
+        jumlahTitik: bestPath[0].length,
+        jarak: bestPath[1],
+        waktuKomputasi: waktuSelesaiAco,
+        memori: penggunaanMemoriAco,
+        jarakTanpaTitik: Graph.distance(bestPath[0][0],bestPath[0][bestPath[0].length-1]),
+        detail: bestPath,
       }
     })
 
@@ -1344,11 +1296,6 @@ $(async () => {
     //   Graph.pathPoints.get(destination.idpoint).cheapestPath
     // );
     // App.drawNavigationPath(stepsAco);
-    try {
-        gc();
-      } catch(e) {
-        
-      }
   });
 
   function getRandomNumber(min, max) {
@@ -1365,160 +1312,31 @@ $(async () => {
       {
         
           start:{
-            lat:-7.96089970678129, //percobaan1
-            lng: 112.65063788741827 //percobaan1
-
-            // -7.923781372946134, 112.59687267243862 //#4
-            // -7.924002534850689, 112.59818628430367 //#5
-            // -7.933064093377771, 112.60232325643301 //#6
-            // -7.924927030174133, 112.59815711528063 //#7
-            // -8.025119469371067, 112.63855822384357 //#8
-            // -8.02362051932453, 112.63657841831446 //#9
-            // -7.946479402541825, 112.64345694333315 //#10
-            
-            // lat: -7.991416543162467,
-            // lng: 112.6282960930214
-            // lat: -7.9414208198425, 
-            // lng: 112.64131486416
+            lat: -7.991416543162467,
+            lng: 112.6282960930214
             // lat: getRandomLat(),
             // lng: getRandomLong()
           },
           end:{
-            lat:-7.971795618780245, //percobaan1
-            lng: 112.60223139077425 //percobaan1
-            // -7,939320862129, 112,62403171509504 //#3
-            // -7.933345686545384, 112.65913411974907 //#4
-            // -7.925024327872972, 112.6005120947957 //#5
-            // -7.933064093377771, 112.60232325643301 //#6
-            // -8.025599198616797, 112.63960495591164 //#7
-            // -7.933705315275011, 112.933705315275011 //#8
-            // -7.924376118879024, 112.5972481817007 //#9
-            // -7.981845234119922, 112.6245017722249 //#10
-
-
-
-            // lat: -7.9759322351900614,
-            // lng: 112.64599230261102
-            // lat: -7.9441038621459,
-            // lng: 112.6199503988
+            lat: -7.9759322351900614,
+            lng: 112.64599230261102
             // lat: getRandomLat(),
             // lng: getRandomLong()
           },
       },
-      {
-        start:{
-          lat:-7.967760031247459,
-          lng: 112.63250514864922 //#2
-        },
-        end:{
-          lat:-7.957399273351381,
-          lng: 112.64377009123564 //#2
-        }
-      },
-      {
-        start:{
-          lat: -7.953136088907187,  //#3
-          lng: 112.61433485895395 //#3
-        },
-        end:{
-          lat:-7.939320862129,
-          lng: 112.62403171509504 //#3
-        }
-      },
-      {
-        start:{
-          lat:-7.923781372946134,
-          lng: 112.59687267243862 //#4
-        },
-        end:{
-          lat:-7.933345686545384,
-          lng: 112.65913411974907 //#4
-        }
-      },
-      {
-        start:{
-          lat:-7.924002534850689,
-          lng: 112.59818628430367 //#5
-        },
-        end:{
-          lat:-7.925024327872972,
-          lng: 112.6005120947957 //#5
-        }
-      },
-      {
-        start:{
-          lat:-7.933064093377771,
-          lng: 112.60232325643301 //#6
-        },
-        end:{
-          lat:-7.957399273351381,
-          lng: 112.60232325643301 //#6
-        }
-      },
-      {
-        start:{
-          lat:-7.924927030174133,
-          lng: 112.59815711528063 //#7
-        },
-        end:{
-          lat:-8.025599198616797,
-          lng: 112.63960495591164 //#7
-        }
-      },
-      {
-        start:{
-          lat:-8.025119469371067,
-          lng: 112.63855822384357 //#8
-        },
-        end:{
-          lat:-7.933705315275011,
-          lng: 112.933705315275011 //#8
-        }
-      },
-      {
-        start:{
-          lat:-8.02362051932453,
-          lng: 112.63657841831446 //#9
-        },
-        end:{
-          lat:-7.924376118879024,
-          lng: 112.5972481817007 //#9
-        }
-      },
-      {
-        start:{
-          lat:-7.946479402541825,
-          lng: 112.64345694333315 //#10
-        },
-        end:{
-          lat:-7.981845234119922,
-          lng: 112.6245017722249 //#10
-        }
-      }
     ];
 
-    $.each(dataLatLong, function (index, value) {  
-      App.getLines();
-      App.startMarker = new google.maps.Marker({
-            map: App.map,
-            position: value.start,
-            draggable: true,
-          });
-      App.endMarker = new google.maps.Marker({
-                map: App.map,
-                position: value.end,
-                draggable: true,
-              });
-      for (let index = 0; index < 30; index++) {
-        $('#btn-clear-map').trigger('click')
-        $('.btn-dijkstra').trigger('click')
-        // indexTry++;
-      }
-      indexContent++;
-      dataCollect[indexContent] = [];
-      memoryCollect[indexContent] = [];
-      memoryCollectAco[indexContent] = [];
-    });
+    App.startMarker = new google.maps.Marker({
+          map: App.map,
+          position: dataLatLong[0].start,
+          draggable: true,
+        });
+    App.endMarker = new google.maps.Marker({
+              map: App.map,
+              position: dataLatLong[0].end,
+              draggable: true,
+            });
+    $('.btn-dijkstra').trigger('click')
     // console.log(dataLatLong, App.startMarker, App.endMarker);
   })
 
@@ -1532,37 +1350,21 @@ $(async () => {
   /**
    * ACOO
    */
-  function hasDuplicates(array) {
-  const valueSet = new Set();
-  for (const value of array) {
-    if (valueSet.has(value)) {
-      // console.log('duplicate', value)
-      // return true; // Duplicate found
-    }
-    valueSet.add(value);
-  }
-  return false; // No duplicates found
-}
   class Ant {
-    constructor(idpoint, idline, idinterchange, nextInterchange = [], lat, long, stop, sequence) {
-      this.idpoint = idpoint,
-      this.idline = idline,
-      this.idinterchange = idinterchange,
-      this.nextInterchange = nextInterchange,
-      this.lat = lat,
-      this.long = long,
-      this.stop = stop,
-      this.sequence = sequence,
-      this.visited = false,
-      this.prevPath = []
+    constructor(id, lat, long, destinations = []) {
+        this.id = id;
+        this.lat = lat;
+        this.long = long;
+        this.destinations = destinations
+        this.visited = false;
     }
 
     visit() {
-      this.visited = true;
+        this.visited = true;
     }
 
     isVisited() {
-      return this.visited;
+        return this.visited;
     }
 
   //   calculateMinPrice(evPoint, edgeCost, currentPoint) {
@@ -1586,322 +1388,149 @@ $(async () => {
     }
   }
 
-  class AntColony {
-    constructor(
-        ants,
-        startSource,
-        endSource,
-        startLat,
-        startLong,
-        endLat,
-        endLong,
-        iterations,
-        evaporationRate,
-        depositAmount,
-        resultDijkstra
-        // antsMap
-      ) {
-        this.ants = ants;
-        this.startSource = startSource;
-        this.endSource = endSource;
-        this.startLat = startLat;
-        this.startLong = startLong;
-        this.endLat = endLat;
-        this.endLong = endLong;
-        this.iterations = iterations;
-        this.evaporationRate = evaporationRate;
-        this.depositAmount = depositAmount;
-        this.resultDijkstra = resultDijkstra;
-        this.bestPathDijkstra = [];
-        this.prevPathAnt = [];
+  // class AntColony {
+  //   constructor(
+  //     source,
+  //     destination,
+  //     startLat,
+  //     startLong,
+  //     endLat,
+  //     endLong,
+  //     iterations,
+  //     evaporationRate,
+  //     depositAmount,
+  //     cheapestPathDijkstra,
+  //     ants = null
+  //   ) {
+  //     this.ants = source;
+  //     this.destination = destination;
+  //     this.startMarker = new Ant(-1, startLat, startLong);
+  //     this.endMarker = new Ant(-2, endLat, endLong);
+  //     this.pheromoneMatrix = this.initPheromoneMatrix();
+  //     this.bestPath = null;
+  //     this.bestDistance = Infinity;
+  //     this.iterations = iterations;
+  //     this.evaporationRate = evaporationRate;
+  //     this.depositAmount = depositAmount;
+  //     this.arrDataDestinations = [];
+  //   }
 
-        this.indexMove = 0;
-        this.antsPath = {};
-        this.pheromoneLevels = {}; // Pheromone levels on edges
-        this.initializePheromoneLevels();
-        // this.antsMap = antsMap
-        this.currentIteration = 0
-        this.endLoop = 0;
-    }
+  //   initPheromoneMatrix() {
+  //     const numAnts = this.ants.length + 2;
+  //     return Array.from({ length: numAnts }, () =>
+  //       Array.from({ length: numAnts }, () => 1)
+  //     );
+  //   }
 
-    // idPointDijkstra(){
-    //   return this.resultDijkstra.map(item=>item.idpoint);
-    // }
+  //   calculateDistance(ant1, ant2) {
+  //     // console.log('ant1 ant 2',ant1, ant2)
+  //     return ant1.distanceTo(ant2);
+  //   }
 
-    initializePheromoneLevels() {
-        // Initialize pheromone levels on edges to a small positive value
-        // You would need to implement this based on your specific graph
-        // For simplicity, let's assume a simple representation
-        // console.log(this.ants)
-        $.each(this.ants, function (key, ant) { 
-          // this.pheromoneLevels[ant.idpoint] = [];
-          $.each(this.ants, function (index, otherAnt) { 
-             if (ant !== otherAnt) {
-                  this.pheromoneLevels[ant.idpoint][otherAnt.idpoint] = 0.01;
-              }
-          });
-        });
-        // this.ants.forEach(ant => {
-        //     this.pheromoneLevels[ant.idpoint] = {};
-        //     this.ants.forEach(otherAnt => {
-        //         if (ant !== otherAnt) {
-        //             this.pheromoneLevels[ant.idpoint][otherAnt.idpoint] = 0.01;
-        //         }
-        //     });
-        // });
-    }
+  //   run() {
+  //     for (let i = 0; i < this.iterations; i++) {
+  //       this.moveAnts();
+  //       this.updatePheromoneMatrix();
+  //       this.updateBestPath();
+  //     }
+  //     return [this.bestPath, this.bestDistance];
+  //   }
 
-    run() {
-        // Implementation of ACO algorithm
-        // console.log(this.pheromoneLevels.size)
-        memoryCollectAco[indexContent].push(performance.memory.usedJSHeapSize);
-        for (let i = 0; i < this.iterations; i++) {
-          // console.log('loop------', i)
-          this.bestPathDijkstra = [];
-          this.prevPathAnt[this.currentIteration] = [];
-          this.indexMove = 1;
-          // var firstAnt = this.ants.find(ant => ant.idpoint === this.startSource.idpoint);
-          var firstAnt = this.ants[this.startSource.idpoint];
-          var pathAnt = this.moveAntIteration(firstAnt)
-          this.resetVisitAnt()
-          this.currentIteration += 1;
-          // var sorted = this.bestPathDijkstra.slice().sort((a, b) => a - b);
-          // console.log(this.prevPathAnt.length, sorted)
-          // hasDuplicates(this.prevPathAnt)
-          // var tempAnt = []
-          //   this.ants.forEach(ant => {
-          //       var currentAnt = this.moveAnt(ant);
-          //       if(currentAnt === false){
-          //         return false;
-          //       }
-          //       // tempAnt.push(currentAnt);
-          //       // currentAnt.prevPath.push(tempAnt);
-          //       console.log(ant, currentAnt)
-          //       // if(ant.)
-          //   });
-          //   this.updatePheromoneLevels();
-        }
-        // this.updatePheromoneLevels();
-        // console.log(this.prevPathAnt);
-        // this.ants.sort((antA, antB) => {
-        //     const lengthA = antA.prevPath ? antA.prevPath.length : 0;
-        //     const lengthB = antB.prevPath ? antB.prevPath.length : 0;
+  //   moveAnts() {
+  //     this.ants.forEach((ant) => {
+  //       // console.log('moveants', ant)
+  //       while (!ant.isVisited()) {
+  //         const nextAnt = this.selectNextAnt(ant);
+  //         ant.visit();
+  //         ant = nextAnt;
+  //       }
+  //     });
+  //   }
 
-        //     // Sort in descending order
-        //     return lengthB - lengthA;
-        // });
-        // console.log(this.ants, this.ants.find(ant => ant.idpoint === this.startSource.idpoint))
-        // ...
-        // Modify and implement the ACO algorithm logic as per your needs
-        // ...
-    }
+  //   selectNextAnt(currentAnt) {
+  //     // You can implement the ant selection logic here, e.g., using pheromone levels and heuristic information
+  //     // For simplicity, we'll just choose the next unvisited ant at random
+  //     const unvisitedAnts = this.ants.filter((ant) => !ant.isVisited());
+  //     const randomIndex =  Math.floor(Math.random() * unvisitedAnts.length);
+  //     return unvisitedAnts[randomIndex];
+  //   }
 
-    // moveAnt(ant) {
-    //     // Implementation of ant movement logic
-    //     console.log(ant)
-    //     // if(this.resultDijkstra.map(item=>item.idpoint).includes(ant.idpoint)){
-    //     //   this.bestPathDijkstra.push(ant.idpoint);
-    //     //   const inArray = this.resultDijkstra.map(item=>item.idpoint).some(innerArray =>
-    //     //       JSON.stringify(innerArray) === JSON.stringify([...new Set(this.bestPathDijkstra)])
-    //     //     );
-    //     //   if(inArray){
-    //     //     return false;
-    //     //   }
-    //     // }
-    //     // Modify and implement the ant movement logic as per your needs
-    //     // ...
-    //     const unvisitedAnts = this.ants.filter(otherAnt => !otherAnt.isVisited());
-    //     if (unvisitedAnts.length === 0) {
-    //         return false; // All nodes visited, return
-    //     }
+  //   updatePheromoneMatrix() {
+  //     // You can implement the pheromone update logic here
+  //     // For simplicity, we'll just use a constant evaporation rate and deposit a fixed amount of pheromone on each path
 
-    //     // if(ant.idpoint == this.endSource.idpoint){
-    //     //   return false;
-    //     // }
+  //     this.pheromoneMatrix.forEach((row, i) => {
+  //       row.forEach((_, j) => {
+  //         this.pheromoneMatrix[i][j] *= 1 - this.evaporationRate;
+  //         this.pheromoneMatrix[i][j] += this.depositAmount;
+  //       });
+  //     });
+  //   }
 
-    //     // Select the next node based on pheromone levels and a heuristic
-    //     const nextNode = this.selectNextNode(ant, unvisitedAnts);
-    //     // console.log('first step ant', ant)
-    //     // console.log('next Node', nextNode)
-    //     // return;
-    //     // console.log('nextNode', nextNode)
-    //     ant.prevPath.push(nextNode)
-    //     this.prevPathAnt.push(ant)
+  //   updateBestPath() {
+  //     /**
+  //      * count every single destionations from ants and get the bestway point
+  //      */
+  //     // const path = [this.startMarker, ...this.ants, this.destination, this.endMarker];
+  //     // const distance = this.calculatePathDistance(path); //first init distance
+  //     // console.log('distance',distance);
+  //     // console.log('distancePath',path);
+  //     console.log('this ants', this.ants)
+  //     this.ants.forEach((value, key) => {
+  //         if (value.destinations != undefined) {
+  //           this.loopDestinations(value, value.destinations, value.id)
+  //         }
+  //     });
 
-    //     // Move to the next node
-    //     const nextAnt = this.moveAnt(nextNode)
-    //     this.updatePheromoneLevels();
-    //     if(nextAnt == false){
-    //       return false;
-    //     }
-    //     return ant
-    // }
-
-    moveAntIteration(ant){
-      memoryCollectAco[indexContent].push(performance.memory.usedJSHeapSize);
-      this.indexMove = 0;
-      this.endLoop = 0;
-      // this.selectNextNode3(ant, ant)
-      // outerLoop:
-      // ant.visit();
-      this.prevPathAnt[this.currentIteration][this.indexMove] = [];
-      this.prevPathAnt[this.currentIteration][this.indexMove].push(ant)
-      ant.nextInterchange.forEach((value, key) => {
-        var currentAnt = this.findAnt(key)
-        memoryCollectAco[indexContent].push(performance.memory.usedJSHeapSize);
-        var nextNode = this.selectNextNode2(currentAnt)
-        memoryCollectAco[indexContent].push(performance.memory.usedJSHeapSize);
-        if(nextNode == false){
-          return
-        }
-        this.indexMove += 1;
-        memoryCollectAco[indexContent].push(performance.memory.usedJSHeapSize);
-        this.prevPathAnt[this.currentIteration][this.indexMove] = [];
-        memoryCollectAco[indexContent].push(performance.memory.usedJSHeapSize);
-      })
+  //   }
 
 
-    }
-
-    // selectNextNode3(firstAnt,nextAnt = null){
-    //   this.prevPathAnt[this.currentIteration][this.indexMove] = [];
-    //   this.prevPathAnt[this.currentIteration][this.indexMove].push(firstAnt)
-    //   if(nextAnt !== null){
-    //     if(nextAnt.visited == false){
-    //     // if(nextAnt.nextInterchange.size == 0 && nextAnt.visited == false){
-    //       nextAnt.visit();
-    //       this.prevPathAnt[this.currentIteration][this.indexMove].push(nextAnt)
-    //       this.selectNextNode3(firstAnt, firstAnt)
-
-    //       if(nextAnt.idpoint == this.endSource.idpoint){
-    //         return;
-    //       }
-    //     }
-    //   }
-    //   nextAnt.nextInterchange.forEach((value, key) => {
-    //       var currentAnt = this.findAnt(key)
-    //       console.log(currentAnt)
-    //       if(currentAnt.visited == false){
-    //         this.selectNextNode3(firstAnt, currentAnt)
-    //       }
-    //       else{
-    //         this.indexMove += 1;
-    //         this.prevPathAnt[this.currentIteration][this.indexMove] = [];
-    //         this.prevPathAnt[this.currentIteration][this.indexMove].push(nextAnt)
-    //       }
-          
-    //   })
-    // }
-
-    //versi2
-    selectNextNode2(ant){
-      memoryCollectAco[indexContent].push(performance.memory.usedJSHeapSize);
-      // console.log(this.endLoop, ant.idpoint, this.endSource.idpoint)
-      if(this.endLoop == 1){
-        return;
-      }
-      pointCollectAco[indexContent] += 1
-      this.prevPathAnt[this.currentIteration][this.indexMove].push(ant);
-      memoryCollectAco[indexContent].push(performance.memory.usedJSHeapSize);
-      if(ant.idpoint == this.endSource.idpoint){
-        this.endLoop = 1;
-        memoryCollectAco[indexContent].push(performance.memory.usedJSHeapSize);
-        return;
-      }
-      ant.visit();
-      memoryCollectAco[indexContent].push(performance.memory.usedJSHeapSize);
-      // innerLoop:
-      ant.nextInterchange.forEach((value, key) => {
-        var currentAnt = this.findAnt(key)
-        memoryCollectAco[indexContent].push(performance.memory.usedJSHeapSize);
-        if(currentAnt.visited == false){
-          this.selectNextNode2(currentAnt)
-        }
-      })
-    }
-
-    findAnt(idPoint){
-      return this.ants[idPoint];
-    }
-
-    // selectNextNode(ant, unvisitedAnts, randomIndex) {
-    //     // Implementation of node selection logic
-    //     // You can use a combination of pheromone levels and a heuristic
-    //     // to determine the next node the ant should move to
-    //     // ...
-    //     var nextAnt, randomIndex;
-    //     // For this example, let's simply choose the next unvisited node randomly
+  //   loopDestinations(pathSource, destinations, idpoint){
+  //     var dataDestinations = []
+  //     // console.log('destinations',destinations)
+  //     destinations.forEach((values, key) => {
+  //       var antData = Graph.pathPoints.get(key);
+  //       // console.log('antData',antData)
+  //       if(antData != undefined) {
+  //         dataDestinations.push(new Ant(antData.idpoint, antData.lat, antData.lng, antData.destinations))
+  //       }
+  //     })
+  //     return destinations
+  //     if(dataDestinations.length > 0) {
+  //       const path = [this.startMarker, pathSource, ...dataDestinations, this.destination, this.endMarker];
+  //       console.log('pathEachAnts', path)
+  //       const distance = this.calculatePathDistance(path)
+  //       console.log('distance ?', distance)
+  //       this.arrDataDestinations.push({
+  //         id: idpoint,
+  //         distance:distance,
+  //         path:path,
+  //       })
+  //       if (distance < this.bestDistance) {
+  //         this.bestDistance = distance;
+  //         var jsonObject = path.map(JSON.stringify);
+  //         var uniqueSet = new Set(jsonObject);
+  //         var uniqueArray = Array.from(uniqueSet).map(JSON.parse);
+  //         this.bestPath = uniqueArray;
+  //       }
         
-    //     if(ant.nextInterchange.size > 0) {         
-    //       const keyArray = [];
-    //       ant.nextInterchange.forEach((value, key) => {
-    //         keyArray.push(key)
-    //       });
-          
-    //       randomIndex = Math.floor(Math.random() * keyArray.length);
-    //       // console.log('random unvisited',randomIndex, unvisitedAnts)
-    //       nextAnt = this.ants.find(ant => ant.idpoint === keyArray[randomIndex])
-    //       if(nextAnt?.visited === true){
-    //         for (let index = 0; index < keyArray.length; index++) {
-    //           nextAnt = this.ants.find(ant => ant.idpoint === keyArray[index])
-    //           if(nextAnt?.visited === false){
-    //             return nextAnt;
-    //           }
-    //         }
-    //         randomIndex = Math.floor(Math.random() * unvisitedAnts.length);
-    //         nextAnt = unvisitedAnts[randomIndex];  
-    //       }  
-    //     }
-    //     else{
-    //       randomIndex = Math.floor(Math.random() * unvisitedAnts.length);
-    //       nextAnt = unvisitedAnts[randomIndex];
-    //     }
-        
-    //     if(nextAnt?.visited === true){
-    //       return this.selectNextNode(ant, unvisitedAnts, randomIndex);
-    //     }
-    //     ant.visited = true
-    //     return nextAnt;
-    // }
+  //     }
+  //   }
 
-    updatePheromoneLevels() {
-        // Update pheromone levels based on ant paths and evaporation
-        // ...
-        // Modify and implement the pheromone update logic as per your needs
-        // ...
-        let objectKey, theAnts;
-        Object.keys(this.pheromoneLevels).forEach(antId => {
-            Object.keys(this.pheromoneLevels[antId]).forEach(otherAntId => {
-                this.pheromoneLevels[antId][otherAntId] *= (1 - this.evaporationRate);
-                // console.log('this.pheromoneLevels', this.pheromoneLevels)
-            });
-        });
-
-        // Deposit pheromone on edges of ants' paths
-        // $.each(this.prevPathAnt, function (indexInArray, valueOfElement) { 
-           
-        // });
-        this.ants.forEach(ant => {
-            // For simplicity, let's assume ant.path is an array of visited nodes
-            for (let i = 1; i < ant.prevPath.length; i++) {
-                const fromNode = ant.prevPath[i - 1];
-                const toNode = ant.prevPath[i];
-                this.pheromoneLevels[fromNode.id][toNode.id] += this.depositAmount;
-                // console.log('this.pheromoneLevels', this.pheromoneLevels)
-            }
-        });
-        // console.log(objectKey, theAnts)
-        return [objectKey, theAnts]
-    }
-
-    resetVisitAnt(){
-      // this.ants.forEach(ant => {
-      //   ant.visited = false;
-      // });
-      $.each(this.ants, function (key, ant) { 
-         ant.visited = false;
-      });
-    }
-}
+  //   calculatePathDistance(path) {
+  //     let distance = 0;
+  //     for (let i = 0; i < path.length - 1; i++) {
+  //       // console.log(path[i+1], this.destination)
+  //       // if(i+1 == path.length){
+  //       //   return distance;
+  //       // }
+  //       distance += this.calculateDistance(path[i], path[i + 1]);
+  //       // console.log('distance',distance)
+  //     }
+  //     // console.log('path',path)
+  //     // console.log('distance',distance)
+  //     return distance;
+  //   }
+  // }
 
 });

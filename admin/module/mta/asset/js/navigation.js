@@ -49,6 +49,7 @@ var memoryCollect = [];
 var pointCollectDj = []
 var memoryCollectAco = [];
 var pointCollectAco = []
+var pointDuplicateCollectAco = [];
 class App {
   static map;
   static mapAco;
@@ -1144,6 +1145,7 @@ $(async () => {
 
     pointCollectDj[indexContent] = 0;
     pointCollectAco[indexContent] = 0;
+    pointDuplicateCollectAco[indexContent] = 0;
     // console.log("start bro");
     var waktuMulai = performance.now();
     var startMemoryUsage = performance.memory.usedJSHeapSize;
@@ -1275,7 +1277,7 @@ $(async () => {
     const endLong = App.endMarker.position.lng()
 
     // Settings for the ACO algorithm
-    const iterations = 2;
+    const iterations = 30;
     const evaporationRate = 0.5;
     const depositAmount = 1;
 
@@ -1312,8 +1314,8 @@ $(async () => {
         memoryStart: startMemoryUsage,
         memoryEnd: endMemoryUsage,
         rateMemory: rateMemory,
-        cost: '',
-        listLIne: []
+        // cost: '',
+        // listLIne: []
         // usedJSHeapSize: endMemoryUsage.usedJSHeapSize - startMemoryUsage.usedJSHeapSize,
         // totalJSHeapSize: endMemoryUsage.totalJSHeapSize - startMemoryUsage.totalJSHeapSize,
         // jsHeapSizeLimit: endMemoryUsage.jsHeapSizeLimit - startMemoryUsage.jsHeapSizeLimit,
@@ -1324,6 +1326,7 @@ $(async () => {
       ACO:{
         jumlahTitik: steps.length,
         titikDilalui: pointCollectAco[indexContent],
+        titikDuplicate : pointDuplicateCollectAco[indexContent],
         jarak: stepsDistance,
         waktuKomputasi: lamaWaktuAco,
         memoryStart: startMemoryUsageAco,
@@ -1454,47 +1457,47 @@ $(async () => {
           lat:-7.957399273351381,
           lng: 112.60232325643301 //#6
         }
-      },
-      {
-        start:{
-          lat:-7.924927030174133,
-          lng: 112.59815711528063 //#7
-        },
-        end:{
-          lat:-8.025599198616797,
-          lng: 112.63960495591164 //#7
-        }
-      },
-      {
-        start:{
-          lat:-8.025119469371067,
-          lng: 112.63855822384357 //#8
-        },
-        end:{
-          lat:-7.933705315275011,
-          lng: 112.933705315275011 //#8
-        }
-      },
-      {
-        start:{
-          lat:-8.02362051932453,
-          lng: 112.63657841831446 //#9
-        },
-        end:{
-          lat:-7.924376118879024,
-          lng: 112.5972481817007 //#9
-        }
-      },
-      {
-        start:{
-          lat:-7.946479402541825,
-          lng: 112.64345694333315 //#10
-        },
-        end:{
-          lat:-7.981845234119922,
-          lng: 112.6245017722249 //#10
-        }
       }
+      // {
+      //   start:{
+      //     lat:-7.924927030174133,
+      //     lng: 112.59815711528063 //#7
+      //   },
+      //   end:{
+      //     lat:-8.025599198616797,
+      //     lng: 112.63960495591164 //#7
+      //   }
+      // },
+      // {
+      //   start:{
+      //     lat:-8.025119469371067,
+      //     lng: 112.63855822384357 //#8
+      //   },
+      //   end:{
+      //     lat:-7.933705315275011,
+      //     lng: 112.933705315275011 //#8
+      //   }
+      // },
+      // {
+      //   start:{
+      //     lat:-8.02362051932453,
+      //     lng: 112.63657841831446 //#9
+      //   },
+      //   end:{
+      //     lat:-7.924376118879024,
+      //     lng: 112.5972481817007 //#9
+      //   }
+      // },
+      // {
+      //   start:{
+      //     lat:-7.946479402541825,
+      //     lng: 112.64345694333315 //#10
+      //   },
+      //   end:{
+      //     lat:-7.981845234119922,
+      //     lng: 112.6245017722249 //#10
+      //   }
+      // }
     ];
 
     $.each(dataLatLong, function (index, value) {  
@@ -1808,6 +1811,8 @@ $(async () => {
         memoryCollectAco[indexContent].push(performance.memory.usedJSHeapSize);
         return;
       }
+      if(ant.visit == true)
+        pointDuplicateCollectAco[indexContent] += 1
       ant.visit();
       memoryCollectAco[indexContent].push(performance.memory.usedJSHeapSize);
       // innerLoop:

@@ -48,7 +48,8 @@ var dataCollect = [];
 var memoryCollect = [];
 var pointCollectDj = []
 var memoryCollectAco = [];
-var pointCollectAco = []
+var pointCollectAco = [];
+var jumlahTitikPersemut = [];
 var pointDuplicateCollectAco = [];
 class App {
   static map;
@@ -1145,6 +1146,7 @@ $(async () => {
 
     pointCollectDj[indexContent] = 0;
     pointCollectAco[indexContent] = 0;
+    jumlahTitikPersemut[indexContent] = [];
     pointDuplicateCollectAco[indexContent] = 0;
     // console.log("start bro");
     var waktuMulai = performance.now();
@@ -1326,6 +1328,7 @@ $(async () => {
       ACO:{
         jumlahTitik: steps.length,
         titikDilalui: pointCollectAco[indexContent],
+        jumlahTitikPersemut: jumlahTitikPersemut[indexContent],
         titikDuplicate : pointDuplicateCollectAco[indexContent],
         jarak: stepsDistance,
         waktuKomputasi: lamaWaktuAco,
@@ -1644,14 +1647,7 @@ $(async () => {
               }
           });
         });
-        // this.ants.forEach(ant => {
-        //     this.pheromoneLevels[ant.idpoint] = {};
-        //     this.ants.forEach(otherAnt => {
-        //         if (ant !== otherAnt) {
-        //             this.pheromoneLevels[ant.idpoint][otherAnt.idpoint] = 0.01;
-        //         }
-        //     });
-        // });
+        
     }
 
     run() {
@@ -1665,82 +1661,13 @@ $(async () => {
           this.indexMove = 1;
           // var firstAnt = this.ants.find(ant => ant.idpoint === this.startSource.idpoint);
           var firstAnt = this.ants[this.startSource.idpoint];
-          var pathAnt = this.moveAntIteration(firstAnt)
+          var pathAnt = this.moveAntIteration(firstAnt, i)
           this.resetVisitAnt()
           this.currentIteration += 1;
-          // var sorted = this.bestPathDijkstra.slice().sort((a, b) => a - b);
-          // console.log(this.prevPathAnt.length, sorted)
-          // hasDuplicates(this.prevPathAnt)
-          // var tempAnt = []
-          //   this.ants.forEach(ant => {
-          //       var currentAnt = this.moveAnt(ant);
-          //       if(currentAnt === false){
-          //         return false;
-          //       }
-          //       // tempAnt.push(currentAnt);
-          //       // currentAnt.prevPath.push(tempAnt);
-          //       console.log(ant, currentAnt)
-          //       // if(ant.)
-          //   });
-          //   this.updatePheromoneLevels();
         }
-        // this.updatePheromoneLevels();
-        // console.log(this.prevPathAnt);
-        // this.ants.sort((antA, antB) => {
-        //     const lengthA = antA.prevPath ? antA.prevPath.length : 0;
-        //     const lengthB = antB.prevPath ? antB.prevPath.length : 0;
-
-        //     // Sort in descending order
-        //     return lengthB - lengthA;
-        // });
-        // console.log(this.ants, this.ants.find(ant => ant.idpoint === this.startSource.idpoint))
-        // ...
-        // Modify and implement the ACO algorithm logic as per your needs
-        // ...
     }
 
-    // moveAnt(ant) {
-    //     // Implementation of ant movement logic
-    //     console.log(ant)
-    //     // if(this.resultDijkstra.map(item=>item.idpoint).includes(ant.idpoint)){
-    //     //   this.bestPathDijkstra.push(ant.idpoint);
-    //     //   const inArray = this.resultDijkstra.map(item=>item.idpoint).some(innerArray =>
-    //     //       JSON.stringify(innerArray) === JSON.stringify([...new Set(this.bestPathDijkstra)])
-    //     //     );
-    //     //   if(inArray){
-    //     //     return false;
-    //     //   }
-    //     // }
-    //     // Modify and implement the ant movement logic as per your needs
-    //     // ...
-    //     const unvisitedAnts = this.ants.filter(otherAnt => !otherAnt.isVisited());
-    //     if (unvisitedAnts.length === 0) {
-    //         return false; // All nodes visited, return
-    //     }
-
-    //     // if(ant.idpoint == this.endSource.idpoint){
-    //     //   return false;
-    //     // }
-
-    //     // Select the next node based on pheromone levels and a heuristic
-    //     const nextNode = this.selectNextNode(ant, unvisitedAnts);
-    //     // console.log('first step ant', ant)
-    //     // console.log('next Node', nextNode)
-    //     // return;
-    //     // console.log('nextNode', nextNode)
-    //     ant.prevPath.push(nextNode)
-    //     this.prevPathAnt.push(ant)
-
-    //     // Move to the next node
-    //     const nextAnt = this.moveAnt(nextNode)
-    //     this.updatePheromoneLevels();
-    //     if(nextAnt == false){
-    //       return false;
-    //     }
-    //     return ant
-    // }
-
-    moveAntIteration(ant){
+    moveAntIteration(ant, index = 0){
       memoryCollectAco[indexContent].push(performance.memory.usedJSHeapSize);
       this.indexMove = 0;
       this.endLoop = 0;
@@ -1752,7 +1679,12 @@ $(async () => {
       ant.nextInterchange.forEach((value, key) => {
         var currentAnt = this.findAnt(key)
         memoryCollectAco[indexContent].push(performance.memory.usedJSHeapSize);
-        var nextNode = this.selectNextNode2(currentAnt)
+        if (!jumlahTitikPersemut[indexContent][index]) {
+          jumlahTitikPersemut[indexContent][index] = [];
+        }
+        // console.log('masuk current antnya-' + index);
+        jumlahTitikPersemut[indexContent][index].push(currentAnt);
+        var nextNode = this.selectNextNode2(currentAnt, index)
         memoryCollectAco[indexContent].push(performance.memory.usedJSHeapSize);
         if(nextNode == false){
           return
@@ -1766,44 +1698,16 @@ $(async () => {
 
     }
 
-    // selectNextNode3(firstAnt,nextAnt = null){
-    //   this.prevPathAnt[this.currentIteration][this.indexMove] = [];
-    //   this.prevPathAnt[this.currentIteration][this.indexMove].push(firstAnt)
-    //   if(nextAnt !== null){
-    //     if(nextAnt.visited == false){
-    //     // if(nextAnt.nextInterchange.size == 0 && nextAnt.visited == false){
-    //       nextAnt.visit();
-    //       this.prevPathAnt[this.currentIteration][this.indexMove].push(nextAnt)
-    //       this.selectNextNode3(firstAnt, firstAnt)
-
-    //       if(nextAnt.idpoint == this.endSource.idpoint){
-    //         return;
-    //       }
-    //     }
-    //   }
-    //   nextAnt.nextInterchange.forEach((value, key) => {
-    //       var currentAnt = this.findAnt(key)
-    //       console.log(currentAnt)
-    //       if(currentAnt.visited == false){
-    //         this.selectNextNode3(firstAnt, currentAnt)
-    //       }
-    //       else{
-    //         this.indexMove += 1;
-    //         this.prevPathAnt[this.currentIteration][this.indexMove] = [];
-    //         this.prevPathAnt[this.currentIteration][this.indexMove].push(nextAnt)
-    //       }
-          
-    //   })
-    // }
 
     //versi2
-    selectNextNode2(ant){
+    selectNextNode2(ant, index){
       memoryCollectAco[indexContent].push(performance.memory.usedJSHeapSize);
       // console.log(this.endLoop, ant.idpoint, this.endSource.idpoint)
       if(this.endLoop == 1){
         return;
       }
       pointCollectAco[indexContent] += 1
+      
       this.prevPathAnt[this.currentIteration][this.indexMove].push(ant);
       memoryCollectAco[indexContent].push(performance.memory.usedJSHeapSize);
       if(ant.idpoint == this.endSource.idpoint){
@@ -1816,58 +1720,36 @@ $(async () => {
       ant.visit();
       memoryCollectAco[indexContent].push(performance.memory.usedJSHeapSize);
       // innerLoop:
-      ant.nextInterchange.forEach((value, key) => {
-        var currentAnt = this.findAnt(key)
-        memoryCollectAco[indexContent].push(performance.memory.usedJSHeapSize);
-        if(currentAnt.visited == false){
-          this.selectNextNode2(currentAnt)
+      //random array
+      const nextInterchangeKeys = Array.from(ant.nextInterchange.keys()); // Get keys as an array
+      this.shuffleArray(nextInterchangeKeys); // Shuffle the keys
+      nextInterchangeKeys.forEach(key => {
+        var currentAnt = this.findAnt(key);
+
+        if (!jumlahTitikPersemut[indexContent][index]) {
+          jumlahTitikPersemut[indexContent][index] = [];
         }
-      })
+        // console.log('masuk current antnya-' + index);
+        jumlahTitikPersemut[indexContent][index].push(currentAnt);
+        memoryCollectAco[indexContent].push(performance.memory.usedJSHeapSize);
+        if (currentAnt.visited == false) {
+          this.selectNextNode2(currentAnt, index);
+        }
+      });
+
     }
+
+    shuffleArray(array) {
+        for (let i = array.length - 1; i > 0; i--) {
+          const j = Math.floor(Math.random() * (i + 1));
+          [array[i], array[j]] = [array[j], array[i]];
+        }
+      }
 
     findAnt(idPoint){
       return this.ants[idPoint];
     }
 
-    // selectNextNode(ant, unvisitedAnts, randomIndex) {
-    //     // Implementation of node selection logic
-    //     // You can use a combination of pheromone levels and a heuristic
-    //     // to determine the next node the ant should move to
-    //     // ...
-    //     var nextAnt, randomIndex;
-    //     // For this example, let's simply choose the next unvisited node randomly
-        
-    //     if(ant.nextInterchange.size > 0) {         
-    //       const keyArray = [];
-    //       ant.nextInterchange.forEach((value, key) => {
-    //         keyArray.push(key)
-    //       });
-          
-    //       randomIndex = Math.floor(Math.random() * keyArray.length);
-    //       // console.log('random unvisited',randomIndex, unvisitedAnts)
-    //       nextAnt = this.ants.find(ant => ant.idpoint === keyArray[randomIndex])
-    //       if(nextAnt?.visited === true){
-    //         for (let index = 0; index < keyArray.length; index++) {
-    //           nextAnt = this.ants.find(ant => ant.idpoint === keyArray[index])
-    //           if(nextAnt?.visited === false){
-    //             return nextAnt;
-    //           }
-    //         }
-    //         randomIndex = Math.floor(Math.random() * unvisitedAnts.length);
-    //         nextAnt = unvisitedAnts[randomIndex];  
-    //       }  
-    //     }
-    //     else{
-    //       randomIndex = Math.floor(Math.random() * unvisitedAnts.length);
-    //       nextAnt = unvisitedAnts[randomIndex];
-    //     }
-        
-    //     if(nextAnt?.visited === true){
-    //       return this.selectNextNode(ant, unvisitedAnts, randomIndex);
-    //     }
-    //     ant.visited = true
-    //     return nextAnt;
-    // }
 
     updatePheromoneLevels() {
         // Update pheromone levels based on ant paths and evaporation

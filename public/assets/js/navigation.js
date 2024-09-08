@@ -589,7 +589,7 @@ class App {
         let color = null;
         let idline = null;
         let path = [];
-        console.log('buildNavigationSteps',destination, pathSteps)
+        // console.log('buildNavigationSteps',destination, pathSteps)
         pathSteps.push(destination);
         App.steps = [];
         App.stepPolylines.forEach((polyline, k) => {
@@ -732,11 +732,18 @@ class App {
         return walkPoly;
     }
 
-    static drawNavigationPath(steps) {
+    static drawNavigationPath(steps, algorithm = 'DJ') {
         // console.log(steps);
 
         App.highResStepPolylines.forEach((polyline) => polyline.setMap(null));
         App.highResStepPolylines = [];
+
+        var strokeColor = 'RED';
+        var strokeOpacity = 0.8;
+        var strokeWeight = 10;
+        if(algorithm == 'ACO'){
+            strokeColor = 'BLUE';
+        }
 
         for (let i = 0; i < steps.length; i++) {
             let step = steps[i];
@@ -747,7 +754,7 @@ class App {
                     break;
                 case "line":
                     if (step.from.idpoint === step.to.idpoint) break;
-                    let strokeColor = step.strokeColor;
+                    // let strokeColor = step.strokeColor;
                     let idline = step.idline;
                     let line = Graph.lines.get(idline);
                     let path = [];
@@ -783,9 +790,9 @@ class App {
                     App.markers.set(step.to.idpoint, endMarker);
                     let highResPoly = new google.maps.Polyline({
                         path: path,
-                        strokeColor: strokeColor,
-                        strokeOpacity: 0.5,
-                        strokeWeight: 5,
+                        strokeColor: strokeColor, //'red',
+                        strokeOpacity: strokeOpacity, //0.8,
+                        strokeWeight: strokeWeight, //10,
                         idline: idline,
                         map: App.map,
                     });
@@ -989,7 +996,7 @@ class Dijkstra {
             let current = Dijkstra.getMinimumCostPoint(Dijkstra.unvisited);
             memoryCollect[indexContent].push(performance.memory.usedJSHeapSize);
             pointCollectDj[indexContent] += 1;
-            // console.log("current", current);
+            // console.log(`current`, current);
             current.destinations.forEach((dest, key) => {
                 let nextPoint = Graph.pathPoints.get(key);
                 // console.log('dest', dest);
@@ -1049,6 +1056,168 @@ class Dijkstra {
         }
     }
 }
+
+class ACO {
+    static pheromone = new Map(); // Pheromone trails between points
+    static visited = new Set();
+    static unvisited = new Set();
+    static alpha = 1; // Influence of pheromone
+    static beta = 2;  // Influence of distance
+    static evaporationRate = 0.5;
+    static ants = [];
+    static maxIterations = 1;
+    static numberOfAnts = 3;
+
+    static run(source, destination) {
+        ACO.initializePheromones();
+
+        for (let iteration = 0; iteration < ACO.maxIterations; iteration++) {
+            ACO.ants = [];
+            console.log(`ITER : ${iteration}`)
+            for (let i = 0; i < ACO.numberOfAnts; i++) {
+                console.log(`SEMUT : ${i}`)
+                let ant = new Ant(source, destination);
+                ACO.ants.push(ant);
+                ant.findPath();
+            }
+
+            ACO.evaporatePheromones();
+            ACO.updatePheromones();
+        }
+        // console.log(ACO.ants)
+        // Find the best path among all ants
+        let bestAnt = ACO.ants.reduce((best, current) => (current.totalCost < best.totalCost ? current : best));
+
+        var stepsDistance = 0;
+        var from = {
+            'idpoint': source?.idpoint,
+            'lat': source?.lat,
+            'lng': source?.lng
+        }
+        var bestAntArr = [];
+        console.log(source)
+        $.each(bestAnt.path, function (index, value) {
+            var to = {
+                'idpoint': value?.idpoint,
+                'lat': value?.lat,
+                'lng': value?.lng
+            }
+            var currentDistance = Graph.distance(from, to);
+            stepsDistance += currentDistance
+            bestAntArr.push(
+            {
+                "type": "line",
+                "idline": `${value?.idline}`,
+                "strokeColor": "BLUE",
+                "from": from,
+                "to": to,
+                "distance": currentDistance
+            })
+
+            from = {
+                'idpoint': value?.idpoint,
+                'lat': value?.lat,
+                'lng': value?.lng
+            }
+        });
+        return {
+            'bestPath': bestAntArr,
+            'distance': stepsDistance
+        };
+    }
+
+    static initializePheromones() {
+        Graph.pathPoints.forEach((point, key) => {
+            point.destinations.forEach((dest, destKey) => {
+                ACO.pheromone.set(`${key}-${destKey}`, 1); // Initialize pheromone trails with a small value
+            });
+        });
+    }
+
+    static evaporatePheromones() {
+        ACO.pheromone.forEach((value, key) => {
+            ACO.pheromone.set(key, value * (1 - ACO.evaporationRate)); // Evaporation of pheromones
+        });
+    }
+
+    static updatePheromones() {
+        ACO.ants.forEach((ant) => {
+            let contribution = 1 / ant.totalCost; // Pheromone contribution is inversely proportional to the cost
+            for (let i = 0; i < ant.path.length - 1; i++) {
+                let key = `${ant.path[i].id}-${ant.path[i + 1].id}`;
+                let pheromoneLevel = ACO.pheromone.get(key) || 0;
+                ACO.pheromone.set(key, pheromoneLevel + contribution); // Update pheromone trail
+            }
+        });
+    }
+
+    static selectNextPoint(currentPoint) {
+        let total = 0;
+        let probabilities = [];
+        let nextDestination = null;
+        // console.log(currentPoint.destinations)
+        // Calculate probabilities based on pheromone and distance
+        currentPoint.destinations.forEach((dest, key) => {
+            // console.log(`selectNextPoint dest`,dest)
+            // console.log(`selectNextPoint key`,key)
+            // console.log(`selectNextPoint Graph`,Graph.points)
+
+            if (!ACO.visited.has(Graph.pathPoints.get(key))) {
+                let pheromoneLevel = ACO.pheromone.get(`${currentPoint.id}-${key}`) || 1;
+                let heuristicValue = 1; // Inverse of the cost (heuristic)
+                if(dest.cost > 0){
+                    heuristicValue = 1 / dest.cost; // Inverse of the cost (heuristic)‘
+                }
+                // console.log(`probability`, Math.pow(pheromoneLevel, ACO.alpha) , Math.pow(heuristicValue, ACO.beta));
+                let probability = Math.pow(pheromoneLevel, ACO.alpha) * Math.pow(heuristicValue, ACO.beta);
+                total += probability;
+                probabilities.push({ point: Graph.pathPoints.get(key), probability });
+                // nextDestination = Graph.pathPoints.get(key);
+                // nextDestination =
+                // console.log(`probabilities`,probabilities)
+            }
+        });
+
+        // Choose the next point based on calculated probabilities
+        let random = Math.random() * total;
+        // if(probabilities.length == 1){
+        //     return nextDestination;
+        // }
+        for (let i = 0; i < probabilities.length; i++) {
+            random -= probabilities[i].probability;
+            if (random <= 0) return probabilities[i].point;
+        }
+        return null;
+    }
+}
+
+class Ant {
+    constructor(source, destination) {
+        this.source = source;
+        this.destination = destination;
+        this.path = [];
+        this.totalCost = 0;
+        ACO.visited = new Set();
+    }
+
+    findPath() {
+        let current = this.source;
+        ACO.visited.add(current);
+        this.path.push(current);
+        // console.log(`current ACO`, current);
+        while (current !== this.destination) {
+            let nextPoint = ACO.selectNextPoint(current);
+            // console.log(nextPoint)
+            if (!nextPoint) break; // If no path, break the loop
+            // console.log(nextPoint.idpoint, current.destinations.get(nextPoint.idpoint))
+            this.totalCost += current.destinations.get(nextPoint.idpoint).cost;
+            current = nextPoint;
+            this.path.push(current);
+            ACO.visited.add(current);
+        }
+    }
+}
+
 
 $(async () => {
     App.initMap();
@@ -1131,6 +1300,8 @@ $(async () => {
         };
         // re-create Graph with source and destination points included
         // console.log(Graph.lines);
+        console.log('DIJKSTRA')
+        console.log('recrete-graph')
         Graph.lines.forEach((line) => {
             // console.log("recreate graph line :", line);
             line.path = Graph.createPath(line.points);
@@ -1141,8 +1312,8 @@ $(async () => {
         Graph.pathPoints.set(destination.idpoint, destination);
         Graph.buildInterconnections();
 
-        // App.drawLine(Graph.lines.get(source.idline));
-        // App.drawLine(Graph.lines.get(destination.idline));
+        App.drawLine(Graph.lines.get(source.idline));
+        App.drawLine(Graph.lines.get(destination.idline));
         // console.log("start marker", [
         //   {
         //     lat: App.startMarker.position.lat(),
@@ -1178,7 +1349,7 @@ $(async () => {
             stepsDistance += Graph.distance(value.from, value.to)
         });
 
-        // console.log('stepDistance', stepsDistance)
+        console.log('stepDistance', stepsDistance)
         /** jangan lupa di uncomment */
         // remove source and destination points from Graph
         // if it is not a point in an interchange.
@@ -1190,7 +1361,7 @@ $(async () => {
         //   Graph.pathPoints.delete(destination.idpoint);
 
         App.drawNavigationPath(steps);
-        App.displayNavigationPath(steps);
+        // App.displayNavigationPath(steps);
         var endMemoryUsage = Math.max(...memoryCollect[indexContent]);
         var waktuSelesai = performance.now();
 
@@ -1200,79 +1371,21 @@ $(async () => {
 
         /**ACO */
         // Example usage with the provided data and settings
-        // console.log("start ACO");
-
-        // var waktuMulaiAco = performance.now();
-        // var startMemoryUsageAco = performance.memory.usedJSHeapSize;
-        // console.log('Graph.pathPoints', Graph.pathPoints)
-        // return console.log(Graph.pathPoints.get(source.idpoint))
-        /**
-         * combine all path
-         */
-        // const combinedArray = [].concat(...App.allPointsLine);
-        // const antsMap = {};
-        // const ants = combinedArray.map(data => {
-        //     const ant = new Ant(
-        //         data.idpoint,
-        //         data.idline,
-        //         data.idinterchange,
-        //         data.destinations ?? [],
-        //         data.lat,
-        //         data.lng,
-        //         data.stop,
-        //         data.sequence
-        //     );
-        //     antsMap[data.idpoint] = ant;
-        //     return ant;
-        // });
-        // console.log(ants)
-        // console.log(antsMap)
-        // const startLat = App.startMarker.position.lat()
-        // const startLong = App.startMarker.position.lng()
-        // const endLat = App.endMarker.position.lat()
-        // const endLong = App.endMarker.position.lng()
-
-        // Settings for the ACO algorithm
-        // const iterations = 30;
-        // const evaporationRate = 0.5;
-        // const depositAmount = 1;
-
-        // return console.log(destination.destinations, Graph.pathPoints.get(destination.idpoint))
-        // const antColony = new AntColony(
-        //     antsMap,
-        //     startSource = source,
-        //     endSource = destination,
-        //     startLat,
-        //     startLong,
-        //     endLat,
-        //     endLong,
-        //     iterations,
-        //     evaporationRate,
-        //     depositAmount,
-        //     resultDijkstra = Graph.pathPoints.get(destination.idpoint).cheapestPath
-        //     // antsMap
-        // );
-
-        // const bestPath = antColony.run();
-
-        // var waktuSelesaiAco = performance.now();
-        // var endMemoryUsageAco = performance.memory.usedJSHeapSize;
-        // var rateMemoryAco = memoryCollectAco[indexContent].reduce((a, b) => a + b, 0) / memoryCollectAco[indexContent].length
-        // var lamaWaktuAco = waktuSelesaiAco - waktuMulaiAco;
-
-        //hibrida
-        // var waktuHibridaStart = performance.now()
-        // const hibridaInstance = new hibrida();
-        // console.log(jumlahTitikPersemut[indexContent])
-        // const mergeGraph = [... new Set(jumlahTitikPersemut[indexContent].flat())]
-
-        // const hibridaGraph = hibridaInstance.buildGraph(jumlahTitikPersemut[indexContent], source, destination)
-        // console.log(hibridaGraph);
-        // console.log(source, destination);
-        // const hibridDj = hibridaInstance.dijkstra(hibridaGraph, source, destination)
-        // console.log(hibridDj)
-        // var waktuHibridaEnd = performance.now()
-        // var totalWaktuHibrida = waktuHibridaEnd - waktuHibridaStart
+        console.log('ACO')
+        console.log('recrete-graph')
+        Graph.lines.forEach((line) => {
+            // console.log("recreate graph line :", line);
+            line.path = Graph.createPath(line.points);
+            // console.log("Created graph line :", line);
+        });
+        // // include source and destinations in path analysis
+        Graph.pathPoints.set(source.idpoint, source);
+        Graph.pathPoints.set(destination.idpoint, destination);
+        Graph.buildInterconnections();
+        console.log(source, destination)
+        const bestPath = ACO.run(source, destination);
+        // App.drawNavigationPath(bestPath.bestPath,'ACO');
+        console.log(bestPath)
         // /**end ACO */
         dataCollect[indexContent].push({
             Dijkstra: {
@@ -1309,13 +1422,8 @@ $(async () => {
             // },
 
         })
-
         console.log(dataCollect)
-        // let stepsAco = App.buildNavigationSteps(
-        //   destination,
-        //   Graph.pathPoints.get(destination.idpoint).cheapestPath
-        // );
-        // App.drawNavigationPath(stepsAco);
+
         try {
             gc();
         } catch (e) {

@@ -357,8 +357,12 @@
     var jsonInterchanges = JSON.parse(`{!! json_encode($interchanges) !!}`);
     var jsonLines = JSON.parse(`{!! json_encode($lines) !!}`)
     var jsonLinesPoint = JSON.parse(`{!! json_encode($linesPoint) !!}`)
+    console.log(jsonInterchanges)
+    console.log(jsonLines)
+    console.log(jsonLinesPoint)
 </script>
-<script src="{{ asset('assets/js/navigation.js') }}"></script>
+{{-- <script src="{{ asset('assets/js/navigation.js') }}"></script> --}}
+<script src="{{ asset('assets/js/navigation-v2.js') }}"></script>
 </script>
 
 </html>

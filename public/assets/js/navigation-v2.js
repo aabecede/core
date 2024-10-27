@@ -1068,8 +1068,7 @@ $(async () => {
         console.log('DIJKSTRA')
 
         let result = Dijkstra.findShortestPath(source, destination);
-        console.log("Shortest Path:", result.path);
-        console.log("Total Distance:", result.cost.distance);
+        console.log(result)
 
         let steps = App.buildNavigationSteps(
             destination,
@@ -1081,7 +1080,7 @@ $(async () => {
         $.each(steps, function (index, value) {
             stepsDistance += Graph.distance(value.from, value.to)
         });
-        console.log('stepDistance', stepsDistance)
+        console.log('Distance DJ', stepsDistance)
         // App.drawNavigationPath(steps);
         // App.displayNavigationPath(steps);
 
@@ -1129,6 +1128,25 @@ $(async () => {
         console.log("Distance ACO:", stepsDistance);
         // App.displayNavigationPath(stepsAco);
         // App.drawNavigationPath(stepsAco);
+
+        console.log('recreate-graph ------ HYBRID');
+        recreateGraphWithUniquePoints(resultAco?.historyPath)
+        let resultHybrid = Dijkstra.findShortestPath(source, destination);
+        console.log(resultHybrid)
+
+        let stepsHybrid = App.buildNavigationSteps(
+            destination,
+            resultHybrid?.path
+        );
+
+        console.log("steps:", stepsHybrid);
+        var stepsDistance = 0;
+        $.each(stepsHybrid, function (index, value) {
+            stepsDistance += Graph.distance(value.from, value.to)
+        });
+        console.log('Distance Hybrid', stepsDistance)
+        App.drawNavigationPath(stepsHybrid);
+
 
     })
 
@@ -1321,6 +1339,7 @@ class Dijkstra {
     static findShortestPath(source, destination) {
         let queue = new Map();
         let visited = new Set();
+        let historyPath = [];
 
         // Initialize source node with distance 0 and add to the queue
         source.cost.distance = 0;
@@ -1335,13 +1354,14 @@ class Dijkstra {
             if (current.idpoint === destination.idpoint) {
                 return {
                     path: current.cheapestPath.concat(current),
-                    cost: current.cost
+                    historyPath: historyPath,
                 };
             }
 
             // Visit each neighbor (destination point)
             current.destinations.forEach((details, idpoint) => {
                 let neighbor = Graph.pathPoints.get(idpoint);
+                // console.log(neighbor)
                 if (!visited.has(neighbor.idpoint)) {
                     let newDistance = current.cost.distance + details.distance;
 
@@ -1350,6 +1370,7 @@ class Dijkstra {
                         neighbor.cost.distance = newDistance;
                         neighbor.cheapestPath = current.cheapestPath.concat(current);
                         queue.set(neighbor.idpoint, neighbor);
+                        historyPath.push(current.cheapestPath.concat(current))
                     }
                 }
             });
@@ -1361,9 +1382,7 @@ class Dijkstra {
         // If no path is found
         return {
             path: [],
-            cost: {
-                distance: Number.MAX_VALUE
-            }
+            historyPath: historyPath,
         };
     }
 }
@@ -1452,7 +1471,7 @@ class ACO {
             let ants = [];
 
             for (let antIndex = 0; antIndex < this.numAnts; antIndex++) {
-                console.log(`Loop Ke ${iteration} - SEMUT KE : ${antIndex}`)
+                // console.log(`Loop Ke ${iteration} - SEMUT KE : ${antIndex}`)
                 let ant = this.createAnt(source, destination, iteration, antIndex);
                 ants.push(ant);
 
@@ -1476,7 +1495,7 @@ class ACO {
                 if (skipAnt) {
                     return; // Skip to the next ant in ants.forEach
                 }
-                console.log('choice ant',ant)
+                // console.log('choice ant',ant)
                 //end custom
                 if (ant.totalDistance < this.shortestPathLength) {
                     this.shortestPathLength = ant.totalDistance;
@@ -1488,6 +1507,7 @@ class ACO {
             this.updatePheromones(ants);
         }
 
+        this.historyPathChoice.push(destination)
         this.historyPathChoice = Array.from(
             new Map(this.historyPathChoice.map(item => [item.idpoint, item])).values()
         );
@@ -1547,25 +1567,20 @@ class ACO {
 //recreate graph
 // Recreate the graph with unique points
 function recreateGraphWithUniquePoints(uniquePointsArray) {
-    // Clear existing points and paths in the Graph
-    Graph.points.clear();
-    Graph.pathPoints.clear();
+    // 2. Assign unique points to each line and rebuild paths
+    Graph.lines.forEach((line) => {
+        // Only assign unique points to the line that match the line's points
+        const uniqueLinePoints = uniquePointsArray.filter(point => point.idline === line.idline);
+        line.points = uniqueLinePoints;
 
-    // Populate Graph.points with unique points
-    uniquePointsArray.forEach((point) => {
-        Graph.points.set(point.idpoint, point);
+        // 3. Rebuild the path using the unique points
+        line.path = Graph.createPath(uniqueLinePoints);
+
+        // 4. Update Graph.pathPoints with unique points
+        uniqueLinePoints.forEach(point => Graph.pathPoints.set(point.idpoint, point));
     });
 
-    // Rebuild lines with the unique points
-    Graph.lines.forEach((line, idline) => {
-        // Filter points belonging to this line
-        const linePoints = uniquePointsArray.filter(p => p.idline === idline);
-
-        // Rebuild the line and paths
-        Graph.buildLine(idline, linePoints);
-    });
-
-    // Rebuild interconnections (if they depend on the unique points)
+    // 5. Build interconnections with the updated unique path points
     Graph.buildInterconnections();
 }
 //HYBRID

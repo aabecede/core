@@ -579,6 +579,7 @@ class App {
     }
 
     static buildNavigationSteps(destination, pathSteps) {
+        console.log(pathSteps)
         let color = null;
         let idline = null;
         let path = [];
@@ -1053,6 +1054,7 @@ $(async () => {
             distance: Number.MAX_VALUE,
         };
 
+        console.log('recrete-graph')
         Graph.lines.forEach((line) => {
             // console.log("recreate graph line :", line);
             line.path = Graph.createPath(line.points);
@@ -1064,7 +1066,6 @@ $(async () => {
         Graph.buildInterconnections();
 
         console.log('DIJKSTRA')
-        console.log('recrete-graph')
 
         let result = Dijkstra.findShortestPath(source, destination);
         console.log("Shortest Path:", result.path);
@@ -1081,8 +1082,53 @@ $(async () => {
             stepsDistance += Graph.distance(value.from, value.to)
         });
         console.log('stepDistance', stepsDistance)
-        App.drawNavigationPath(steps);
-        App.displayNavigationPath(steps);
+        // App.drawNavigationPath(steps);
+        // App.displayNavigationPath(steps);
+
+        console.log('recreate-graph ------ ACO');
+        Graph.lines.forEach((line) => {
+            line.path = Graph.createPath(line.points);
+        });
+
+        Graph.pathPoints.set(source.idpoint, source);
+        Graph.pathPoints.set(destination.idpoint, destination);
+
+        // Establish interconnections
+        Graph.buildInterconnections();
+
+        // Initialize the ACO instance with the graph and additional parameters
+        const aco = new ACO({
+            graph: { // Pass only the necessary data
+                pathPoints: Graph.pathPoints,
+                interchanges: Graph.interchanges,
+            },
+            alpha: 1,
+            beta: 2,
+            evaporationRate: 0.5,
+            numAnts: parseInt($(`#numAnts`).val(), 10),
+            numIterations: parseInt($(`#numIterations`).val(), 10),
+            pheromoneStrength: 1
+        });
+
+        // Execute ACO's run method with source and destination
+        const resultAco = aco.run(source, destination);
+
+        // Output the result
+        console.log("ACO Result:", resultAco);
+
+        let stepsAco = App.buildNavigationSteps(
+            destination,
+            resultAco?.shortPath
+        );
+        console.log("steps ACO:", stepsAco);
+        var stepsDistance = 0;
+        $.each(stepsAco, function (index, value) {
+            // console.log(value)
+            stepsDistance += Graph.distance(value.from, value.to)
+        });
+        console.log("Distance ACO:", stepsDistance);
+        // App.displayNavigationPath(stepsAco);
+        // App.drawNavigationPath(stepsAco);
 
     })
 
@@ -1324,8 +1370,9 @@ class Dijkstra {
 
 //ACO
 class ACO {
-    constructor(graph, alpha = 1, beta = 2, evaporationRate = 0.5, numAnts = 10, numIterations = 100, pheromoneStrength = 1) {
+    constructor({graph, alpha = 1, beta = 2, evaporationRate = 0.5, numAnts = 10, numIterations = 100, pheromoneStrength = 1}) {
         this.graph = graph;
+        console.log(graph)
         this.alpha = alpha; // Importance of pheromone
         this.beta = beta; // Importance of distance (heuristic)
         this.evaporationRate = evaporationRate; // Evaporation rate of pheromones
@@ -1335,6 +1382,9 @@ class ACO {
         this.pheromones = new Map(); // Pheromone levels on the graph
         this.shortestPath = [];
         this.shortestPathLength = Number.MAX_VALUE;
+        this.jalanBuntu = [];
+        this.historyPathChoiceDetail = []
+        this.historyPathChoice = []
 
         // Initialize pheromones on every edge
         this.graph.pathPoints.forEach((point) => {
@@ -1369,10 +1419,13 @@ class ACO {
     chooseNextPoint(currentPoint, visitedPoints) {
         let probabilities = [];
         let destinations = Array.from(currentPoint.destinations.entries());
-
+        // console.log('destinations',destinations)
         let sumProbabilities = 0;
         destinations.forEach(([idpoint, data]) => {
+            // console.log(data)
+            //break condition
             if (visitedPoints.has(idpoint)) return;
+            if (this.jalanBuntu.includes(idpoint)) return;
 
             let pheromoneLevel = this.pheromones.get(`${currentPoint.idpoint}-${idpoint}`) || 0.1;
             let heuristicValue = 1 / data.distance;
@@ -1399,15 +1452,32 @@ class ACO {
             let ants = [];
 
             for (let antIndex = 0; antIndex < this.numAnts; antIndex++) {
-                let ant = this.createAnt(source, destination);
+                console.log(`Loop Ke ${iteration} - SEMUT KE : ${antIndex}`)
+                let ant = this.createAnt(source, destination, iteration, antIndex);
                 ants.push(ant);
 
                 // Log every single ant's path
-                console.log(`Ant ${antIndex + 1}: Path -> ${ant.path.map(p => p.idpoint).join(' -> ')}, Distance -> ${ant.totalDistance}`);
+                // console.log(`Ant ${antIndex + 1}: Path -> ${ant.path.map(p => p.idpoint).join(' -> ')}, Distance -> ${ant.totalDistance}`);
             }
 
             // Check for new shortest path
             ants.forEach((ant) => {
+                //custom
+                let skipAnt = false; // Flag to skip current ant if condition is met
+                // console.log('the ant - ',ant)
+                $.each(ant.path, (key, value) => {
+                    // console.log('this value ?',value, this.jalanBuntu.includes((value?.idpoint)))
+                    if (Array.isArray(this.jalanBuntu) && this.jalanBuntu.includes((value?.idpoint))) {
+                        skipAnt = true; // Set flag to true if value.idpoint is in jalanBuntu
+                        return false; // Break out of $.each for this ant
+                    }
+                });
+
+                if (skipAnt) {
+                    return; // Skip to the next ant in ants.forEach
+                }
+                console.log('choice ant',ant)
+                //end custom
                 if (ant.totalDistance < this.shortestPathLength) {
                     this.shortestPathLength = ant.totalDistance;
                     this.shortestPath = ant.path;
@@ -1418,24 +1488,52 @@ class ACO {
             this.updatePheromones(ants);
         }
 
-        console.log("Shortest Path Found: ", this.shortestPath.map(p => p.idpoint).join(' -> '));
-        console.log("Shortest Path Length: ", this.shortestPathLength);
+        this.historyPathChoice = Array.from(
+            new Map(this.historyPathChoice.map(item => [item.idpoint, item])).values()
+        );
+
+        return {
+            'jalanBuntu': this.jalanBuntu,
+            'shortPath': this.shortestPath,
+            'historyPathDetail': this.historyPathChoiceDetail,
+            'historyPath': this.historyPathChoice
+        }
+        // console.log("Jalan Buntu: ", this.jalanBuntu);
+        // console.log("Shortest Path Found: ", this.shortestPath.map(p => p.idpoint).join(' -> '));
+        // console.log("Shortest Path Length: ", this.shortestPathLength);
     }
 
     // Create a single ant and run it from source to destination
-    createAnt(source, destination) {
+    createAnt(source, destination, currentIteration, currentAnt) {
         let visitedPoints = new Set();
         let currentPoint = source;
         let path = [currentPoint];
         let totalDistance = 0;
 
         visitedPoints.add(currentPoint.idpoint);
+        let prevPoint = 0
+
+        // Initialize historyPathChoiceDetail if not already
+        if (!this.historyPathChoiceDetail[currentIteration]) {
+            this.historyPathChoiceDetail[currentIteration] = [];
+        }
+        if (!this.historyPathChoiceDetail[currentIteration][currentAnt]) {
+            this.historyPathChoiceDetail[currentIteration][currentAnt] = [];
+        }
 
         while (currentPoint.idpoint !== destination.idpoint) {
             let nextPointData = this.chooseNextPoint(currentPoint, visitedPoints);
+            // console.log(`Pilih Next POITN`,nextPointData)
+            if (!nextPointData) {
+                //menandai jika jalannya buntu
+                this.jalanBuntu.push(prevPoint)
+                break
+            };
 
-            if (!nextPointData) break;
-
+            this.historyPathChoiceDetail[currentIteration][currentAnt].push(currentPoint)
+            this.historyPathChoice.push(currentPoint)
+            // console.log(this.jalanBuntu)
+            prevPoint = nextPointData?.idpoint
             totalDistance += nextPointData.distance;
             currentPoint = this.graph.pathPoints.get(nextPointData.idpoint);
             visitedPoints.add(currentPoint.idpoint);
@@ -1446,4 +1544,28 @@ class ACO {
     }
 }
 
+//recreate graph
+// Recreate the graph with unique points
+function recreateGraphWithUniquePoints(uniquePointsArray) {
+    // Clear existing points and paths in the Graph
+    Graph.points.clear();
+    Graph.pathPoints.clear();
+
+    // Populate Graph.points with unique points
+    uniquePointsArray.forEach((point) => {
+        Graph.points.set(point.idpoint, point);
+    });
+
+    // Rebuild lines with the unique points
+    Graph.lines.forEach((line, idline) => {
+        // Filter points belonging to this line
+        const linePoints = uniquePointsArray.filter(p => p.idline === idline);
+
+        // Rebuild the line and paths
+        Graph.buildLine(idline, linePoints);
+    });
+
+    // Rebuild interconnections (if they depend on the unique points)
+    Graph.buildInterconnections();
+}
 //HYBRID

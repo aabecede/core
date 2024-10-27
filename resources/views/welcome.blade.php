@@ -287,6 +287,20 @@
             <button class="btn btn-primary" id="btn-generateRandom">Generate Random</button>
         </div>
         <h5>DIJKSTRA</h5>
+        <br>
+        <div class="row">
+            <div class="col-12">
+                <h5>Setting ACO</h5>
+            </div>
+            <div class="col-md-3">
+                <label>numAnts</label>
+                <input type="form-control" id="numAnts" value="3" placeholder="numAnts">
+            </div>
+            <div class="col-md-3">
+                <label>numIterations</label>
+                <input type="form-control" id="numIterations" value="3" placeholder="numIterations">
+            </div>
+        </div>
         <div id="map" class="flex-fill"></div>
         <!-- <h5>ACO</h5>
 <div id="mapAco" class="flex-fill"></div> -->

@@ -45,11 +45,6 @@ var setZoom = 18;
 var indexTry = 0;
 var indexContent = 0;
 var dataCollect = [];
-var memoryCollect = [];
-var pointCollectDj = []
-var memoryCollectAco = [];
-var pointCollectAco = [];
-var jumlahTitikPersemut = [];
 var pointDuplicateCollectAco = [];
 class App {
     static map;
@@ -969,6 +964,13 @@ class Graph {
         });
         return nearestPoint;
     }
+
+    static reset() {
+        Graph.lines.clear();
+        Graph.interchanges.clear();
+        Graph.points.clear();
+        Graph.pathPoints.clear();
+    }
 }
 
 
@@ -1012,9 +1014,6 @@ $(async () => {
     // var waktuSelesai = performance.now();
     // var waktu = waktuSelesai - waktuMulai
     // console.log('waktu',waktu)
-    dataCollect[indexContent] = [];
-    memoryCollect[indexContent] = []
-    memoryCollectAco[indexContent] = []
     $("#mta-nav .btn-dijkstra").on("click", (e) => {
         try {
             gc();
@@ -1022,10 +1021,6 @@ $(async () => {
 
         }
 
-        pointCollectDj[indexContent] = 0;
-        pointCollectAco[indexContent] = 0;
-        jumlahTitikPersemut[indexContent] = [];
-        pointDuplicateCollectAco[indexContent] = 0;
         // console.log("start bro");
         var waktuMulai = performance.now();
         var startMemoryUsage = performance.memory.usedJSHeapSize;
@@ -1067,8 +1062,22 @@ $(async () => {
 
         console.log('DIJKSTRA')
 
+        //start dj
+        var grafSize = calculateGraphSize()
+        dataCollect[indexContent]['Dijkstra'][indexTry] = {
+            waktuMulai:performance.now(),
+            waktuSelesai:0,
+            waktuTotal:0,
+            memoryTotal:0,
+            memoryRate:0,
+            grafNode:grafSize.node,
+            grafEdge:grafSize.edge,
+            jarakTempuh:0
+        };
+
+        console.log(source, destination)
         let result = Dijkstra.findShortestPath(source, destination);
-        console.log(result)
+        console.log('result DJ',result)
 
         let steps = App.buildNavigationSteps(
             destination,
@@ -1081,10 +1090,27 @@ $(async () => {
             stepsDistance += Graph.distance(value.from, value.to)
         });
         console.log('Distance DJ', stepsDistance)
+
+        dataCollect[indexContent]['Dijkstra'][indexTry].waktuSelesai = performance.now()
+        dataCollect[indexContent]['Dijkstra'][indexTry].waktuTotal = dataCollect[indexContent]['Dijkstra'][indexTry].waktuSelesai - dataCollect[indexContent]['Dijkstra'][indexTry].waktuMulai;
+        dataCollect[indexContent]['Dijkstra'][indexTry].jarakTempuh = stepsDistance
+        // console.log(dataCollect);
         // App.drawNavigationPath(steps);
         // App.displayNavigationPath(steps);
 
         console.log('recreate-graph ------ ACO');
+        var waktuMulaiHybrid = performance.now()
+        grafSize = calculateGraphSize()
+        dataCollect[indexContent]['ACO'][indexTry] = {
+            waktuMulai:performance.now(),
+            waktuSelesai:0,
+            waktuTotal:0,
+            memoryTotal:0,
+            memoryRate:0,
+            grafNode:grafSize.node,
+            grafEdge:grafSize.edge,
+            jarakTempuh:0
+        };
         Graph.lines.forEach((line) => {
             line.path = Graph.createPath(line.points);
         });
@@ -1126,13 +1152,32 @@ $(async () => {
             stepsDistance += Graph.distance(value.from, value.to)
         });
         console.log("Distance ACO:", stepsDistance);
+
+        dataCollect[indexContent]['ACO'][indexTry].waktuSelesai = performance.now()
+        dataCollect[indexContent]['ACO'][indexTry].waktuTotal = dataCollect[indexContent]['ACO'][indexTry].waktuSelesai - dataCollect[indexContent]['ACO'][indexTry].waktuMulai
+        dataCollect[indexContent]['ACO'][indexTry].jarakTempuh = stepsDistance
         // App.displayNavigationPath(stepsAco);
         // App.drawNavigationPath(stepsAco);
 
         console.log('recreate-graph ------ HYBRID');
+        dataCollect[indexContent]['HYBRID'][indexTry] = {
+            waktuMulai:waktuMulaiHybrid,
+            waktuSelesai:0,
+            waktuTotal:0,
+            memoryTotal:0,
+            memoryRate:0,
+            grafNode:0,
+            grafEdge:0,
+            jarakTempuh:0
+        };
         recreateGraphWithUniquePoints(resultAco?.historyPath)
-        let resultHybrid = Dijkstra.findShortestPath(source, destination);
-        console.log(resultHybrid)
+
+        grafSize = calculateGraphSize()
+        dataCollect[indexContent]['HYBRID'][indexTry].grafNode = grafSize.node
+        dataCollect[indexContent]['HYBRID'][indexTry].grafEdge = grafSize.edge
+
+        let resultHybrid = DijkstraHybrid.findShortestPath(source, destination);
+        // console.log(resultHybrid)
 
         let stepsHybrid = App.buildNavigationSteps(
             destination,
@@ -1145,8 +1190,11 @@ $(async () => {
             stepsDistance += Graph.distance(value.from, value.to)
         });
         console.log('Distance Hybrid', stepsDistance)
-        App.drawNavigationPath(stepsHybrid);
+        dataCollect[indexContent]['HYBRID'][indexTry].waktuSelesai = performance.now()
+        dataCollect[indexContent]['HYBRID'][indexTry].waktuTotal = dataCollect[indexContent]['HYBRID'][indexTry].waktuSelesai - waktuMulaiHybrid
+        dataCollect[indexContent]['HYBRID'][indexTry].jarakTempuh = stepsDistance
 
+        // App.drawNavigationPath(stepsHybrid);
 
     })
 
@@ -1164,49 +1212,17 @@ function getRandomNumber(min, max) {
 
 $('#btn-generateRandom').on('click', function () {
     let dataLatLong = [
-        // {
+        {
 
-        //     start: {
-        //         lat: -7.96089970678129, //percobaan1
-        //         lng: 112.65063788741827 //percobaan1
-
-        //         // -7.923781372946134, 112.59687267243862 //#4
-        //         // -7.924002534850689, 112.59818628430367 //#5
-        //         // -7.933064093377771, 112.60232325643301 //#6
-        //         // -7.924927030174133, 112.59815711528063 //#7
-        //         // -8.025119469371067, 112.63855822384357 //#8
-        //         // -8.02362051932453, 112.63657841831446 //#9
-        //         // -7.946479402541825, 112.64345694333315 //#10
-
-        //         // lat: -7.991416543162467,
-        //         // lng: 112.6282960930214
-        //         // lat: -7.9414208198425,
-        //         // lng: 112.64131486416
-        //         // lat: getRandomLat(),
-        //         // lng: getRandomLong()
-        //     },
-        //     end: {
-        //         lat: -7.971795618780245, //percobaan1
-        //         lng: 112.60223139077425 //percobaan1
-        //         // -7,939320862129, 112,62403171509504 //#3
-        //         // -7.933345686545384, 112.65913411974907 //#4
-        //         // -7.925024327872972, 112.6005120947957 //#5
-        //         // -7.933064093377771, 112.60232325643301 //#6
-        //         // -8.025599198616797, 112.63960495591164 //#7
-        //         // -7.933705315275011, 112.933705315275011 //#8
-        //         // -7.924376118879024, 112.5972481817007 //#9
-        //         // -7.981845234119922, 112.6245017722249 //#10
-
-
-
-        //         // lat: -7.9759322351900614,
-        //         // lng: 112.64599230261102
-        //         // lat: -7.9441038621459,
-        //         // lng: 112.6199503988
-        //         // lat: getRandomLat(),
-        //         // lng: getRandomLong()
-        //     },
-        // },
+            start: {
+                lat: -7.96089970678129, //percobaan1
+                lng: 112.65063788741827 //percobaan1
+            },
+            end: {
+                lat: -7.971795618780245, //percobaan1
+                lng: 112.60223139077425 //percobaan1
+            },
+        },
         // {
         //     start: {
         //         lat: -7.967760031247459,
@@ -1227,16 +1243,16 @@ $('#btn-generateRandom').on('click', function () {
         //         lng: 112.62403171509504 //#3
         //     }
         // },
-        {
-            start: {
-                lat: -7.923781372946134,
-                lng: 112.59687267243862 //#4
-            },
-            end: {
-                lat: -7.933345686545384,
-                lng: 112.65913411974907 //#4
-            }
-        },
+        // {
+        //     start: {
+        //         lat: -7.923781372946134,
+        //         lng: 112.59687267243862 //#4
+        //     },
+        //     end: {
+        //         lat: -7.933345686545384,
+        //         lng: 112.65913411974907 //#4
+        //     }
+        // },
         // {
         //     start: {
         //         lat: -7.924002534850689,
@@ -1301,7 +1317,16 @@ $('#btn-generateRandom').on('click', function () {
         // }
     ];
 
-    $.each(dataLatLong, function (index, value) {
+    $.each(dataLatLong, async function (index, value) {
+        console.log(`------------ RANDOM --------- ${index}`)
+        console.log(`JUMLAH SEMUT  : ${$('#numAnts').val()}`)
+        console.log(`ITERASI SEMUT  : ${$('#numIterations').val()}`)
+        //init data collect
+        dataCollect[indexContent] = {}
+        dataCollect[indexContent]['Dijkstra'] = [];
+        dataCollect[indexContent]['ACO'] = [];
+        dataCollect[indexContent]['HYBRID'] = [];
+
         App.getLines();
         App.startMarker = new google.maps.Marker({
             map: App.map,
@@ -1313,18 +1338,20 @@ $('#btn-generateRandom').on('click', function () {
             position: value.end,
             draggable: true,
         });
-        // for (let index = 0; index < 30; index++) {
-        for (let index = 0; index < 1; index++) {
-            $('#btn-clear-map').trigger('click')
+
+
+        for (let key = 0; key < 30; key++) {
+        //for (let key = 0; key < 3; key++) {
+            console.log(`------------ ITERASI KE  --------- ${key}`)
+            // $('#btn-clear-map').trigger('click')
             $('.btn-dijkstra').trigger('click')
-            // indexTry++;
+            indexTry++;
         }
         indexContent++;
-        dataCollect[indexContent] = [];
-        memoryCollect[indexContent] = [];
-        memoryCollectAco[indexContent] = [];
+
     });
-    // console.log(dataLatLong, App.startMarker, App.endMarker);
+    console.log('---- LOG -----')
+    console.log(dataCollect)
 })
 
 $("#btn-clear-map").on("click", () => {
@@ -1336,7 +1363,12 @@ $("#btn-clear-map").on("click", () => {
 
 //DIJKSTRA
 class Dijkstra {
-    static findShortestPath(source, destination) {
+    static findShortestPath(source, destination, index = 0) {
+        var arrMemory = []
+        var memoryTotal = 0
+        var memoryRate = 0
+        arrMemory.push(performance.memory.usedJSHeapSize)
+        // console.log('source',source.cost)
         let queue = new Map();
         let visited = new Set();
         let historyPath = [];
@@ -1346,12 +1378,19 @@ class Dijkstra {
         queue.set(source.idpoint, source);
 
         while (queue.size > 0) {
+            arrMemory.push(performance.memory.usedJSHeapSize)
             // Get node with the smallest distance (this could be optimized with a priority queue)
             let current = Array.from(queue.values()).reduce((a, b) => a.cost.distance < b.cost.distance ? a : b);
             queue.delete(current.idpoint);
 
             // If we've reached the destination, return the path and cost
             if (current.idpoint === destination.idpoint) {
+                arrMemory.push(performance.memory.usedJSHeapSize)
+
+                memoryTotal = arrMemory.reduce((acc, value) => acc + value, 0) / (1024 * 1024)
+                memoryRate = memoryTotal / arrMemory.length;
+                dataCollect[indexContent]['Dijkstra'][indexTry].memoryTotal =   memoryTotal
+                dataCollect[indexContent]['Dijkstra'][indexTry].memoryRate  =   memoryTotal / memoryRate
                 return {
                     path: current.cheapestPath.concat(current),
                     historyPath: historyPath,
@@ -1360,6 +1399,7 @@ class Dijkstra {
 
             // Visit each neighbor (destination point)
             current.destinations.forEach((details, idpoint) => {
+                arrMemory.push(performance.memory.usedJSHeapSize)
                 let neighbor = Graph.pathPoints.get(idpoint);
                 // console.log(neighbor)
                 if (!visited.has(neighbor.idpoint)) {
@@ -1374,11 +1414,15 @@ class Dijkstra {
                     }
                 }
             });
-
+            arrMemory.push(performance.memory.usedJSHeapSize)
             // Mark the current node as visited
             visited.add(current.idpoint);
         }
-
+        arrMemory.push(performance.memory.usedJSHeapSize)
+        memoryTotal = hitungmemoryTotal(arrMemory)
+        memoryRate = memoryTotal / arrMemory.length;
+        dataCollect[indexContent]['Dijkstra'][indexTry].memoryTotal =   memoryTotal
+        dataCollect[indexContent]['Dijkstra'][indexTry].memoryRate  =   memoryTotal / memoryRate
         // If no path is found
         return {
             path: [],
@@ -1467,11 +1511,17 @@ class ACO {
 
     // Run the optimization algorithm
     run(source, destination) {
+        var arrMemory = []
+        var memoryTotal = 0
+        var memoryRate = 0
+        arrMemory.push(performance.memory.usedJSHeapSize)
+
         for (let iteration = 0; iteration < this.numIterations; iteration++) {
             let ants = [];
 
             for (let antIndex = 0; antIndex < this.numAnts; antIndex++) {
                 // console.log(`Loop Ke ${iteration} - SEMUT KE : ${antIndex}`)
+                arrMemory.push(performance.memory.usedJSHeapSize)
                 let ant = this.createAnt(source, destination, iteration, antIndex);
                 ants.push(ant);
 
@@ -1481,36 +1531,50 @@ class ACO {
 
             // Check for new shortest path
             ants.forEach((ant) => {
+                arrMemory.push(performance.memory.usedJSHeapSize)
                 //custom
                 let skipAnt = false; // Flag to skip current ant if condition is met
                 // console.log('the ant - ',ant)
                 $.each(ant.path, (key, value) => {
+                    arrMemory.push(performance.memory.usedJSHeapSize)
                     // console.log('this value ?',value, this.jalanBuntu.includes((value?.idpoint)))
                     if (Array.isArray(this.jalanBuntu) && this.jalanBuntu.includes((value?.idpoint))) {
+                        arrMemory.push(performance.memory.usedJSHeapSize)
                         skipAnt = true; // Set flag to true if value.idpoint is in jalanBuntu
                         return false; // Break out of $.each for this ant
                     }
                 });
 
                 if (skipAnt) {
+                    arrMemory.push(performance.memory.usedJSHeapSize)
                     return; // Skip to the next ant in ants.forEach
                 }
                 // console.log('choice ant',ant)
                 //end custom
                 if (ant.totalDistance < this.shortestPathLength) {
+                    arrMemory.push(performance.memory.usedJSHeapSize)
                     this.shortestPathLength = ant.totalDistance;
                     this.shortestPath = ant.path;
                 }
             });
 
             this.evaporatePheromones();
+            arrMemory.push(performance.memory.usedJSHeapSize)
             this.updatePheromones(ants);
+            arrMemory.push(performance.memory.usedJSHeapSize)
         }
 
         this.historyPathChoice.push(destination)
+        arrMemory.push(performance.memory.usedJSHeapSize)
         this.historyPathChoice = Array.from(
             new Map(this.historyPathChoice.map(item => [item.idpoint, item])).values()
         );
+        arrMemory.push(performance.memory.usedJSHeapSize)
+
+        memoryTotal = hitungmemoryTotal(arrMemory)
+        memoryRate = memoryTotal / arrMemory.length
+        dataCollect[indexContent]['ACO'][indexTry].memoryTotal = memoryTotal
+        dataCollect[indexContent]['ACO'][indexTry].memoryRate = memoryTotal
 
         return {
             'jalanBuntu': this.jalanBuntu,
@@ -1564,6 +1628,76 @@ class ACO {
     }
 }
 
+//DJ Hybrid
+class DijkstraHybrid {
+    static findShortestPath(source, destination, index = 0) {
+        var arrMemory = []
+        var memoryTotal = 0
+        var memoryRate = 0
+        arrMemory.push(performance.memory.usedJSHeapSize)
+        // console.log('source',source.cost)
+        let queue = new Map();
+        let visited = new Set();
+        let historyPath = [];
+
+        // Initialize source node with distance 0 and add to the queue
+        source.cost.distance = 0;
+        queue.set(source.idpoint, source);
+
+        while (queue.size > 0) {
+            arrMemory.push(performance.memory.usedJSHeapSize)
+            // Get node with the smallest distance (this could be optimized with a priority queue)
+            let current = Array.from(queue.values()).reduce((a, b) => a.cost.distance < b.cost.distance ? a : b);
+            queue.delete(current.idpoint);
+
+            // If we've reached the destination, return the path and cost
+            if (current.idpoint === destination.idpoint) {
+                arrMemory.push(performance.memory.usedJSHeapSize)
+
+                memoryTotal = hitungmemoryTotal(arrMemory) + dataCollect[indexContent]['HYBRID'][indexTry].memoryTotal
+                memoryRate = memoryTotal / (arrMemory.length + 1);
+                dataCollect[indexContent]['HYBRID'][indexTry].memoryTotal =   memoryTotal
+                dataCollect[indexContent]['HYBRID'][indexTry].memoryRate  =   memoryRate
+                return {
+                    path: current.cheapestPath.concat(current),
+                    historyPath: historyPath,
+                };
+            }
+
+            // Visit each neighbor (destination point)
+            current.destinations.forEach((details, idpoint) => {
+                arrMemory.push(performance.memory.usedJSHeapSize)
+                let neighbor = Graph.pathPoints.get(idpoint);
+                // console.log(neighbor)
+                if (!visited.has(neighbor.idpoint)) {
+                    let newDistance = current.cost.distance + details.distance;
+
+                    // If a shorter path to the neighbor is found
+                    if (newDistance < neighbor.cost.distance) {
+                        neighbor.cost.distance = newDistance;
+                        neighbor.cheapestPath = current.cheapestPath.concat(current);
+                        queue.set(neighbor.idpoint, neighbor);
+                        historyPath.push(current.cheapestPath.concat(current))
+                    }
+                }
+            });
+            arrMemory.push(performance.memory.usedJSHeapSize)
+            // Mark the current node as visited
+            visited.add(current.idpoint);
+        }
+        arrMemory.push(performance.memory.usedJSHeapSize)
+        memoryTotal = hitungmemoryTotal(arrMemory) + dataCollect[indexContent]['HYBRID'][indexTry].memoryTotal
+        memoryRate = memoryTotal / (arrMemory.length + 1);
+        dataCollect[indexContent]['HYBRID'][indexTry].memoryTotal =   memoryTotal
+        dataCollect[indexContent]['HYBRID'][indexTry].memoryRate  =   memoryRate
+        // If no path is found
+        return {
+            path: [],
+            historyPath: historyPath,
+        };
+    }
+}
+
 //recreate graph
 // Recreate the graph with unique points
 function recreateGraphWithUniquePoints(uniquePointsArray) {
@@ -1583,4 +1717,24 @@ function recreateGraphWithUniquePoints(uniquePointsArray) {
     // 5. Build interconnections with the updated unique path points
     Graph.buildInterconnections();
 }
-//HYBRID
+
+function calculateGraphSize() {
+    // Number of nodes
+    const numberOfNodes = Graph.points.size;
+
+    // Number of edges
+    let numberOfEdges = 0;
+    Graph.points.forEach((point) => {
+        numberOfEdges += point.destinations?.size || 0; // Count all destinations
+    });
+
+    // console.log("Graph Size:");
+    // console.log("Number of Nodes:", numberOfNodes);
+    // console.log("Number of Edges:", numberOfEdges);
+
+    return { node:numberOfNodes, edge:numberOfEdges };
+}
+//jadikan
+function hitungmemoryTotal(arrMemory){
+    return arrMemory.reduce((acc, value) => acc + value, 0) / (1024 * 1024)
+}

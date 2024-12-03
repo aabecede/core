@@ -294,11 +294,11 @@
             </div>
             <div class="col-md-3">
                 <label>numAnts</label>
-                <input type="form-control" id="numAnts" value="3" placeholder="numAnts">
+                <input type="form-control" id="numAnts" value="5" placeholder="numAnts">
             </div>
             <div class="col-md-3">
                 <label>numIterations</label>
-                <input type="form-control" id="numIterations" value="3" placeholder="numIterations">
+                <input type="form-control" id="numIterations" value="30" placeholder="numIterations">
             </div>
         </div>
         <div id="map" class="flex-fill"></div>
